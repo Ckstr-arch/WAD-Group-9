@@ -1,0 +1,22 @@
+# Config / secrets
+/config/config.php
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Dependencies (if using Composer later)
+/vendor/
+composer.lock
+
+# Uploaded user content (don't commit runtime uploads)
+/public/assets/uploads/
