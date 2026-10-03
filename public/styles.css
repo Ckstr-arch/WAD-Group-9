@@ -1,0 +1,461 @@
+/* RESET & BASE STYLES */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+/* MAIN CONTAINER & BACKGROUND */
+.main-container {
+    width: 100%;
+    min-height: 100vh;
+    /* 100% 100% zooms out the background image to fit the exact screen dimensions without cutting off any edges */
+    background: url('assets/images/nsbm.png') no-repeat center center;
+    background-size: 100% 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.3) 100%);
+    z-index: 1;
+}
+
+.content-wrapper {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 1280px;
+    padding: 3rem 2.5rem;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 3rem;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* LEFT HERO SECTION */
+.hero-section {
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.logo-icon-css {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+}
+
+.logo-icon-css.small {
+    width: 30px;
+    height: 30px;
+}
+
+.leaf {
+    width: 100%;
+    height: 100%;
+}
+
+.leaf-1 {
+    background: #82C341;
+    border-radius: 10px 0 10px 0;
+}
+
+.leaf-2 {
+    background: #00529C;
+    border-radius: 0 10px 0 10px;
+}
+
+.leaf-3 {
+    background: #00529C;
+    border-radius: 0 10px 0 10px;
+}
+
+.leaf-4 {
+    background: #82C341;
+    border-radius: 10px 0 10px 0;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    letter-spacing: 0.5px;
+}
+
+.brand-sub {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 1px;
+}
+
+.logo-text.dark .brand-name {
+    color: #0b1e36;
+}
+
+.logo-text.dark .brand-sub {
+    color: #00529c;
+}
+
+/* HERO MAIN TEXT */
+.hero-content {
+    margin-top: 1rem;
+}
+
+.hero-title {
+    font-size: 3.8rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+}
+
+.hero-title .highlight {
+    color: #98d132;
+}
+
+.hero-tagline {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.hero-description {
+    font-size: 1rem;
+    color: #f8fafc;
+    max-width: 500px;
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* FEATURE ICONS BAR */
+.features-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-box {
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.feature-item span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* RIGHT SECTION: LOGIN CARD */
+.login-section {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.login-card {
+    background: #ffffff;
+    width: 100%;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.card-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.5rem;
+}
+
+.card-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.2rem;
+}
+
+.card-subtext {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 1.8rem;
+}
+
+/* FORM STYLES */
+.login-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.input-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-symbol {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.eye-symbol {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.eye-symbol:hover {
+    color: #0f172a;
+}
+
+.input-wrapper input {
+    width: 100%;
+    padding: 0.75rem 2.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-wrapper input:focus {
+    border-color: #0061d5;
+    box-shadow: 0 0 0 3px rgba(0, 97, 213, 0.15);
+}
+
+.input-wrapper input::placeholder {
+    color: #94a3b8;
+}
+
+/* CHECKBOX & FORGOT LINK */
+.options-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.remember-me input {
+    accent-color: #0061d5;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.forgot-link {
+    color: #0061d5;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+/* LOGIN BUTTON */
+.login-btn {
+    width: 100%;
+    padding: 0.8rem;
+    background-color: #0061d5;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.login-btn:hover {
+    background-color: #004fb0;
+}
+
+/* DIVIDER */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 0.6rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.divider span {
+    padding: 0 10px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* SSO BUTTON WITH PURE CSS MS LOGO */
+.sso-btn {
+    width: 100%;
+    padding: 0.7rem;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #334155;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.sso-btn:hover {
+    background-color: #f8fafc;
+}
+
+.ms-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    width: 16px;
+    height: 16px;
+}
+
+.ms-sq {
+    width: 100%;
+    height: 100%;
+}
+
+.ms-sq.red { background: #f35325; }
+.ms-sq.green { background: #81bc06; }
+.ms-sq.blue { background: #05a6f0; }
+.ms-sq.yellow { background: #ffba08; }
+
+/* CARD FOOTER */
+.card-footer {
+    margin-top: 1.8rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+}
+
+.card-footer a {
+    color: #0061d5;
+    text-decoration: none;
+}
+
+.card-footer a:hover {
+    text-decoration: underline;
+}
+
+/* RESPONSIVE LAYOUT */
+@media (max-width: 900px) {
+    .content-wrapper {
+        grid-template-columns: 1fr;
+        padding: 2rem 1.5rem;
+        min-height: auto;
+    }
+
+    .hero-section {
+        height: auto;
+        margin-bottom: 2rem;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+    }
+
+    .login-section {
+        justify-content: center;
+    }
+}
