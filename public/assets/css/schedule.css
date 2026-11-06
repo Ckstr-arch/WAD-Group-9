@@ -1,9 +1,9 @@
 :root{
-  --navy:#092a57;
-  --navy-light:#113975;
-  --green:#2fd66c;
+  --navy:#0e2a52;
+  --navy-light:#163b73;
+  --green:#22c55e;
   --green-dark:#16a34a;
-  --text:#1d2b3f;
+  --text:#1f2937;
   --muted:#6b7280;
   --bg:#f3f5f7;
   --card:#ffffff;
@@ -87,6 +87,6 @@ table{width:100%;border-collapse:collapse;font-size:14px;}
 th,td{text-align:left;padding:10px;border-bottom:1px solid var(--border);}
 th{color:var(--muted);font-weight:600;font-size:13px;}
 .status{padding:4px 10px;border-radius:12px;font-size:12px;color:#fff;}
-.status-pending{background:#f5a110;}
-.status-approved{background:#27c962;}
+.status-pending{background:#f59e0b;}
+.status-approved{background:#22c55e;}
 .muted{color:var(--muted);font-size:13px;}
