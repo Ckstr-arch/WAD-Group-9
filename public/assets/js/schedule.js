@@ -1,6 +1,5 @@
-// ---------- Shared mock data ----------
-// Weekly recurring schedule (not tied to specific dates), matching the
-// NSBM Practice Sessions Schedule of Sports Club board.
+// Weekly recurring schedule (tied to specific dates), matching the
+// NSBM Practice Sessions Schedule of Sports Club.
 const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 const trainingSessions = [
