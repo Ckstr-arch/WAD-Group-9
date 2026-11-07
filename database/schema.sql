@@ -89,3 +89,25 @@ INSERT INTO facilities (name) VALUES
     ('Gymnasium'),
     ('Phase 2 Ground')
 ON DUPLICATE KEY UPDATE name = facilities.name;
+
+CREATE TABLE IF NOT EXISTS bookings (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    facility VARCHAR(64) NOT NULL,
+    booked_by BIGINT UNSIGNED NOT NULL,
+    sport VARCHAR(80) NOT NULL,
+    booking_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status ENUM('pending', 'confirmed', 'cancelled', 'completed') NOT NULL DEFAULT 'pending',
+    notes TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY bookings_booking_date_idx (booking_date),
+    KEY bookings_facility_interval_idx (facility, booking_date, status, start_time, end_time),
+    KEY bookings_status_idx (status),
+    KEY bookings_booked_by_idx (booked_by),
+    CONSTRAINT bookings_user_fk FOREIGN KEY (booked_by) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT bookings_facility_fk FOREIGN KEY (facility) REFERENCES facilities (name) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT bookings_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
+);
