@@ -76,3 +76,8 @@ CREATE TABLE IF NOT EXISTS tournaments {
     CONSTRAINT tournaments_date_check CHECK (end_date >= start_date),
     CONSTRAINT tournaments_teams_check CHECK (max_teams > 0 AND registered_teams <= max_teams)
 };
+
+CREATE TABLE IF NOT EXISTS facilities {
+    name VARCHAR(64) NOT NULL,
+    PRIMARY KEY (name)
+}
