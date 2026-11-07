@@ -76,3 +76,47 @@ CREATE TABLE IF NOT EXISTS tournaments {
     CONSTRAINT tournaments_date_check CHECK (end_date >= start_date),
     CONSTRAINT tournaments_teams_check CHECK (max_teams > 0 AND registered_teams <= max_teams)
 };
+
+CREATE TABLE IF NOT EXISTS facilities {
+    name VARCHAR(64) NOT NULL,
+    PRIMARY KEY (name)
+};
+
+INSERT INTO facilities (name) VALUES
+    ('Indoor Court'),
+    ('Main Ground'),
+    ('Swimming Pool'),
+    ('Gymnasium'),
+    ('Phase 2 Ground')
+ON DUPLICATE KEY UPDATE name = facilities.name;
+
+CREATE TABLE IF NOT EXISTS bookings (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    facility VARCHAR(64) NOT NULL,
+    booked_by BIGINT UNSIGNED NOT NULL,
+    sport VARCHAR(80) NOT NULL,
+    booking_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status ENUM('pending', 'confirmed', 'cancelled', 'completed') NOT NULL DEFAULT 'pending',
+    notes TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY bookings_booking_date_idx (booking_date),
+    KEY bookings_facility_interval_idx (facility, booking_date, status, start_time, end_time),
+    KEY bookings_status_idx (status),
+    KEY bookings_booked_by_idx (booked_by),
+    CONSTRAINT bookings_user_fk FOREIGN KEY (booked_by) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT bookings_facility_fk FOREIGN KEY (facility) REFERENCES facilities (name) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT bookings_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
+);
+
+CREATE TABLE IF NOT EXISTS login_attempts {
+    limiter_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    failures INT UNSIGNED NOT NULL DEFAULT 0,
+    window_started_at DATETIME NOT NULL,
+    blocked_until DATETIME NULL,
+    PRIMARY KEY (limiter_key),
+    KEY login_attempts_window_idx (window_started_at)
+};
