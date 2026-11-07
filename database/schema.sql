@@ -56,3 +56,23 @@ CREATE TABLE IF NOT EXISTS schedules {
     CONSTRAINT schedules_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
 };
 
+CREATE TABLE IF NOT EXISTS tournaments {
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(160) NOT NULL,
+    sport VARCHAR(80) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    format VARCHAR(80) NOT NULL,
+    max_teams INT UNSIGNED NOT NULL,
+    registered_teams INT UNSIGNED NOT NULL DEFAULT 0,
+    status ENUM('registration_open', 'upcoming', 'ongoing', 'completed', 'cancelled') NOT NULL DEFAULT 'registration_open',
+    description TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY tournaments_start_date_idx (start_date),
+    KEY tournaments_status_idx (status),
+    KEY tournaments_sport_idx (sport),
+    CONSTRAINT tournaments_date_check CHECK (end_date >= start_date),
+    CONSTRAINT tournaments_teams_check CHECK (max_teams > 0 AND registered_teams <= max_teams)
+};
