@@ -80,4 +80,12 @@ CREATE TABLE IF NOT EXISTS tournaments {
 CREATE TABLE IF NOT EXISTS facilities {
     name VARCHAR(64) NOT NULL,
     PRIMARY KEY (name)
-}
+};
+
+INSERT INTO facilities (name) VALUES
+    ('Indoor Court'),
+    ('Main Ground'),
+    ('Swimming Pool'),
+    ('Gymnasium'),
+    ('Phase 2 Ground')
+ON DUPLICATE KEY UPDATE name = facilities.name;
