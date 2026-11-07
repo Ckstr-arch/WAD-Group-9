@@ -111,3 +111,12 @@ CREATE TABLE IF NOT EXISTS bookings (
     CONSTRAINT bookings_facility_fk FOREIGN KEY (facility) REFERENCES facilities (name) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT bookings_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
 );
+
+CREATE TABLE IF NOT EXISTS login_attempts {
+    limiter_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    failures INT UNSIGNED NOT NULL DEFAULT 0,
+    window_started_at DATETIME NOT NULL,
+    blocked_until DATETIME NULL,
+    PRIMARY KEY (limiter_key),
+    KEY login_attempts_window_idx (window_started_at)
+};
