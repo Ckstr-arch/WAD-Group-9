@@ -1,12 +1,17 @@
 <?php
-
+/**
+ * api/inventory.php
+ *   GET                                       stock levels (any signed-in user)
+ *   PUT  { id, total_stock?, issued_count? }  admin updates stock numbers
+ *   POST { item_name, total_stock }           admin adds a new item
+ */
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
 const INVENTORY_SELECT = 'SELECT id, item_name, item_name AS name, total_stock, total_stock AS total,
                                  issued_count, (total_stock - issued_count) AS available, updated_at
                           FROM inventory';
-                          
+
 function find_item(int $id): ?array
 {
     $stmt = db()->prepare(INVENTORY_SELECT . ' WHERE id = ?');

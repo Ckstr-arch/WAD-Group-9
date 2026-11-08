@@ -1,4 +1,11 @@
 <?php
+/**
+ * api/bookings.php
+ *   GET    [?status=pending|approved|rejected]   admin: all bookings, student: own bookings
+ *   POST   { facility_name, date_time }          student (or admin) creates a booking -> pending
+ *   PUT    { id, status }                        admin approves / rejects (POST with "id" also works)
+ *   DELETE ?id=                                  cancel a booking (owner while pending, or admin)
+ */
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
@@ -20,7 +27,7 @@ $method = request_method();
 $user   = require_login();
 $body   = in_array($method, ['POST', 'PUT'], true) ? read_json_body() : [];
 
-
+/* ---------- GET: list ---------- */
 if ($method === 'GET') {
     $sql    = BOOKING_SELECT;
     $where  = [];
@@ -48,7 +55,7 @@ if ($method === 'GET') {
     json_response(['success' => true, 'data' => $stmt->fetchAll()]);
 }
 
-
+/* ---------- PUT (or POST with id): approve / reject ---------- */
 $isUpdate = $method === 'PUT'
     || ($method === 'POST' && (isset($body['id']) || ($_GET['action'] ?? '') === 'update'));
 
@@ -72,7 +79,7 @@ if ($isUpdate) {
     json_response(['success' => true, 'data' => find_booking($id)]);
 }
 
-
+/* ---------- POST: create ---------- */
 if ($method === 'POST') {
     $facility = clean_text($body['facility_name'] ?? '');
     $rawDate  = clean_text($body['date_time'] ?? '');
@@ -99,7 +106,7 @@ if ($method === 'POST') {
     json_response(['success' => true, 'data' => find_booking((int) db()->lastInsertId())], 201);
 }
 
-
+/* ---------- DELETE: cancel ---------- */
 if ($method === 'DELETE') {
     $id = to_id($_GET['id'] ?? null);
     if ($id === null) {

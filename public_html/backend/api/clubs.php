@@ -1,5 +1,13 @@
 <?php
-
+/**
+ * api/clubs.php
+ *   GET                         list clubs (+ member_count, and my_status for the caller)
+ *   GET  ?view=my               the caller's own memberships/requests
+ *   GET  ?view=requests         admin: join requests (default pending; ?status=approved|rejected|all)
+ *   POST { name, description }  admin: create a club
+ *   POST { club_id }            student: request to join a club
+ *   PUT  { id, status }         admin: approve / reject a join request (id = club_memberships.id)
+ */
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
@@ -22,6 +30,7 @@ $method = request_method();
 $user   = require_login();
 $body   = in_array($method, ['POST', 'PUT'], true) ? read_json_body() : [];
 
+/* ---------- GET ---------- */
 if ($method === 'GET') {
     $view = strtolower(clean_text($_GET['view'] ?? ''));
 
@@ -66,6 +75,7 @@ if ($method === 'GET') {
     json_response(['success' => true, 'data' => $stmt->fetchAll()]);
 }
 
+/* ---------- PUT: approve / reject a join request ---------- */
 if ($method === 'PUT') {
     require_admin();
     $id     = to_id($body['id'] ?? $_GET['id'] ?? null);
@@ -85,8 +95,10 @@ if ($method === 'PUT') {
     json_response(['success' => true, 'data' => find_request($id)]);
 }
 
+/* ---------- POST ---------- */
 if ($method === 'POST') {
 
+    // Student: request to join
     if (array_key_exists('club_id', $body)) {
         $clubId = to_id($body['club_id']);
         if ($clubId === null) {
@@ -108,6 +120,7 @@ if ($method === 'POST') {
                     ? 'You are already a member of this club.'
                     : 'You already have a pending request for this club.', 409);
             }
+            // Previously rejected: allow re-applying
             $up = db()->prepare("UPDATE club_memberships SET status = 'pending', requested_at = NOW() WHERE id = ?");
             $up->execute([$existing['id']]);
             json_response(['success' => true, 'data' => find_request((int) $existing['id'])], 200);
@@ -120,6 +133,7 @@ if ($method === 'POST') {
         json_response(['success' => true, 'data' => find_request((int) db()->lastInsertId())], 201);
     }
 
+    // Admin: create a club
     require_admin();
     $name = clean_text($body['name'] ?? '');
     $desc = clean_text($body['description'] ?? '');
