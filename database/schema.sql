@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users {
     UNIQUE KEY users_email_unique (email),
     KEY users_role_active_idx (role, is_active),
     CONSTRAINT users_active_check CHECK (is_active IN (0, 1))
-};
+} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS clubs {
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS clubs {
     KEY clubs_status_idx (status),
     KEY clubs_manager_idx (manager_id),
     CONSTRAINT clubs_manager_fk FOREIGN KEY (manager_id) REFERENCES users (id) ON DELETE
-};
+} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS schedules {
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS schedules {
     KEY schedules_status_idx (status),
     KEY schedules_sport_idx (sport),
     CONSTRAINT schedules_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
-};
+}  ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tournaments {
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -75,12 +75,12 @@ CREATE TABLE IF NOT EXISTS tournaments {
     KEY tournaments_sport_idx (sport),
     CONSTRAINT tournaments_date_check CHECK (end_date >= start_date),
     CONSTRAINT tournaments_teams_check CHECK (max_teams > 0 AND registered_teams <= max_teams)
-};
+} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS facilities {
     name VARCHAR(64) NOT NULL,
     PRIMARY KEY (name)
-};
+} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO facilities (name) VALUES
     ('Indoor Court'),
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     CONSTRAINT bookings_user_fk FOREIGN KEY (booked_by) REFERENCES users (id) ON DELETE RESTRICT,
     CONSTRAINT bookings_facility_fk FOREIGN KEY (facility) REFERENCES facilities (name) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT bookings_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
-);
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS login_attempts {
     limiter_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -119,4 +119,5 @@ CREATE TABLE IF NOT EXISTS login_attempts {
     blocked_until DATETIME NULL,
     PRIMARY KEY (limiter_key),
     KEY login_attempts_window_idx (window_started_at)
-};
+} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Uses InnoDB for reliable data storage, utf8mb4 to support all Unicode characters, and a case-insensitive collation for text comparisons.
