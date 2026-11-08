@@ -145,3 +145,4 @@ if ($method === 'POST') {
     ], 201);
 }
 
+method_not_allowed(['GET', 'POST', 'PUT']):
