@@ -1,6 +1,8 @@
-CREATE TABLE IF NOT EXISTS users {
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    student_id VARCHAR(16) NOT NULL, --Yet to verify
+    student_id VARCHAR(16) NOT NULL, 
     name VARCHAR(200) NOT NULL,
     email VARCHAR(254) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -14,9 +16,9 @@ CREATE TABLE IF NOT EXISTS users {
     UNIQUE KEY users_email_unique (email),
     KEY users_role_active_idx (role, is_active),
     CONSTRAINT users_active_check CHECK (is_active IN (0, 1))
-} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS clubs {
+CREATE TABLE IF NOT EXISTS clubs (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     name VARCHAR(120) NOT NULL,
     sport VARCHAR(80) NOT NULL,
@@ -33,10 +35,10 @@ CREATE TABLE IF NOT EXISTS clubs {
     KEY clubs_sport_idx (sport),
     KEY clubs_status_idx (status),
     KEY clubs_manager_idx (manager_id),
-    CONSTRAINT clubs_manager_fk FOREIGN KEY (manager_id) REFERENCES users (id) ON DELETE
-} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT clubs_manager_fk FOREIGN KEY (manager_id) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS schedules {
+CREATE TABLE IF NOT EXISTS schedules (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     sport VARCHAR(80) NOT NULL,
     event_name VARCHAR(160) NOT NULL,
@@ -54,9 +56,9 @@ CREATE TABLE IF NOT EXISTS schedules {
     KEY schedules_status_idx (status),
     KEY schedules_sport_idx (sport),
     CONSTRAINT schedules_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
-}  ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+)  ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS tournaments {
+CREATE TABLE IF NOT EXISTS tournaments (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     name VARCHAR(160) NOT NULL,
     sport VARCHAR(80) NOT NULL,
@@ -75,12 +77,12 @@ CREATE TABLE IF NOT EXISTS tournaments {
     KEY tournaments_sport_idx (sport),
     CONSTRAINT tournaments_date_check CHECK (end_date >= start_date),
     CONSTRAINT tournaments_teams_check CHECK (max_teams > 0 AND registered_teams <= max_teams)
-} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS facilities {
+CREATE TABLE IF NOT EXISTS facilities (
     name VARCHAR(64) NOT NULL,
     PRIMARY KEY (name)
-} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO facilities (name) VALUES
     ('Indoor Court'),
@@ -112,12 +114,12 @@ CREATE TABLE IF NOT EXISTS bookings (
     CONSTRAINT bookings_time_check CHECK (start_time >= '00:00:00' AND end_time <= '23:59:59' AND end_time > start_time)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS login_attempts {
+CREATE TABLE IF NOT EXISTS login_attempts (
     limiter_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     failures INT UNSIGNED NOT NULL DEFAULT 0,
     window_started_at DATETIME NOT NULL,
     blocked_until DATETIME NULL,
     PRIMARY KEY (limiter_key),
     KEY login_attempts_window_idx (window_started_at)
-} ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Uses InnoDB for reliable data storage, utf8mb4 to support all Unicode characters, and a case-insensitive collation for text comparisons.
