@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/database.php';
 const INVENTORY_SELECT = 'SELECT id, item_name, item_name AS name, total_stock, total_stock AS total,
                                  issued_count, (total_stock - issued_count) AS available, updated_at
                           FROM inventory';
-                          git add inventory
+                          
 function find_item(int $id): ?array
 {
     $stmt = db()->prepare(INVENTORY_SELECT . ' WHERE id = ?');
