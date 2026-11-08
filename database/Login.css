@@ -45,3 +45,8 @@ input {
     width: 100%;
     cursor: pointer;
 }
+.form-error {
+    color: #dc4c64;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
