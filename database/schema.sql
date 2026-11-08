@@ -2,7 +2,7 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    student_id VARCHAR(16) NOT NULL, --Yet to verify
+    student_id VARCHAR(16) NOT NULL, 
     name VARCHAR(200) NOT NULL,
     email VARCHAR(254) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
