@@ -1,17 +1,11 @@
 <?php
-/**
- * api/auth.php
- *   POST   { email, password }      -> login
- *   GET                             -> session check (current user)
- *   POST   ?action=logout | DELETE  -> logout
- */
+
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
 $method = request_method();
 $action = strtolower((string) ($_GET['action'] ?? ''));
 
-/* ---------- Session check ---------- */
 if ($method === 'GET') {
     $user = current_user();
     if ($user === null) {
@@ -20,7 +14,6 @@ if ($method === 'GET') {
     json_response(['success' => true, 'user' => $user]);
 }
 
-/* ---------- Logout ---------- */
 if ($method === 'DELETE' || ($method === 'POST' && $action === 'logout')) {
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
@@ -38,7 +31,6 @@ if ($method === 'DELETE' || ($method === 'POST' && $action === 'logout')) {
     json_response(['success' => true, 'message' => 'Signed out.']);
 }
 
-/* ---------- Login ---------- */
 if ($method === 'POST') {
     $body     = read_json_body();
     $email    = strtolower(clean_text($body['email'] ?? ''));
@@ -52,12 +44,11 @@ if ($method === 'POST') {
     }
 
     $stmt = db()->prepare(
-        'SELECT id, name, email, password_hash, role, status FROM users WHERE email = ? LIMIT 1'
-    );
+        'SELECT id, name, email, password_hash, role, status FROM users WHERE email = ? LIMIT 1');
     $stmt->execute([$email]);
     $row = $stmt->fetch();
 
-    // Always run one password_verify so response time doesn't reveal whether the email exists
+
     $hash  = $row['password_hash'] ?? password_hash('timing-equaliser', PASSWORD_DEFAULT);
     $valid = password_verify($password, $hash) && $row !== false;
 
@@ -68,7 +59,7 @@ if ($method === 'POST') {
         json_error('This account is not active. Please contact an administrator.', 403);
     }
 
-    session_regenerate_id(true);               // prevent session fixation
+    session_regenerate_id(true);               
     $_SESSION['user_id'] = (int) $row['id'];
 
     if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
