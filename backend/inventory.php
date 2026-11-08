@@ -91,4 +91,4 @@ if ($method === 'POST') {
     json_response(['success' => true, 'data' => find_item((int) db()->lastInsertId())], 201);
 }
 
-
+method_not_allowed(['GET', 'POST', 'PUT']);
