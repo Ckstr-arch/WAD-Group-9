@@ -19,4 +19,13 @@ Thumbs.db
 composer.lock
 
 # Uploaded user content (don't commit runtime uploads)
-/public/assets/uploads/
+# Guys,  upload ur gitignores here, Ex: /public/assets/uploads/
+
+# Vercel
+.vercel
+
+
+# Your seed file once it holds a real password hash:
+# copy seed.sql to seed.local.sql, edit that copy, and it stays out of git
+./database/seed-passwords.php
+./database/seed.sql
