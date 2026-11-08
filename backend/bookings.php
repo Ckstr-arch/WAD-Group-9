@@ -102,6 +102,7 @@ if ($method === 'POST') {
 
 if ($method === 'DELETE') {
     $id = to_id($_GET['id'] ?? null);
+    
     if ($id === null) {
         json_error('A valid booking id is required.', 400);
     }
