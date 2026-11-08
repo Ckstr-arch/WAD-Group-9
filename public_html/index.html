@@ -1,1 +1,93 @@
-//World
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · NSBM SportsHub</title>
+  <!-- Dedicated CSS for Login only -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <main class="login-layout">
+        <section class="login-story">
+            <div class="brand" aria-label="NSBM SportsHub">
+                <svg class="brand-mark" viewBox="34 14 407 444" aria-hidden="true" focusable="false">
+                <defs>
+                    <linearGradient id="brand-blue" x1="40" y1="130" x2="360" y2="360" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#2463a1"/>
+                    <stop offset="1" stop-color="#18558e"/>
+                    </linearGradient>
+                    <linearGradient id="brand-blue-top" x1="240" y1="20" x2="414" y2="133" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#205e9b"/>
+                    <stop offset="1" stop-color="#245e96"/>
+                    </linearGradient>
+                    <linearGradient id="brand-green" x1="239" y1="180" x2="435" y2="280" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#39b143"/>
+                    <stop offset="1" stop-color="#32a942"/>
+                    </linearGradient>
+                    <linearGradient id="brand-lime" x1="40" y1="200" x2="286" y2="380" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#8fc640"/>
+                    <stop offset="1" stop-color="#88c440"/>
+                    </linearGradient>
+                </defs>
+                <path fill="url(#brand-blue-top)" d="M240 18C294 20 351 30 396 50C405 77 411 106 414 133L239 145Z"/>
+                <path fill="url(#brand-blue)" d="M40 130C111 133 161 101 201 105C217 118 231 134 239 145L239 345C228 335 217 329 205 332C172 267 111 219 41 189Z"/>
+                <path fill="url(#brand-lime)" d="M40 46C103 51 165 74 201 105C161 102 143 131 40 131Z"/>
+                <path fill="url(#brand-blue)" d="M286 331L379 355C350 396 295 429 236 454C259 418 277 376 286 331Z"/>
+                <path fill="url(#brand-lime)" d="M205 332C217 329 229 335 239 345C253 333 269 329 286 332C278 380 257 428 236 454C231 410 221 367 205 332Z"/>
+                <path fill="url(#brand-green)" d="M239 116C278 86 309 125 414 132L435 133L435 363C375 367 327 340 286 333C268 329 251 332 239 345Z"/>
+                <path fill="url(#brand-lime)" d="M40 214C125 251 205 321 207 444C107 421 50 302 40 214Z"/>
+                </svg>
+                <span class="brand-name">NSBM<span>SPORTSHUB</span></span>
+            </div>
+            <div class="login-story-copy">
+                <span class="eyebrow">FOR THE LOVE OF THE GAME</span>
+                <h1 id="story-heading">Your campus.<br>Your team.<br><em>Your next move.</em></h1>
+                <p>Find your people, push your limits, and be part of something bigger.</p>
+            </div>
+            <div class="story-art" aria-hidden="true">
+                <span class="story-number">01</span>
+                <div class="running-track"></div>
+                <svg class="story-star" viewBox="0 0 100 100">
+                <g stroke="currentColor" stroke-width="5">
+                    <path d="M50 4v92M4 50h92M17.5 17.5l65 65M17.5 82.5l65-65"/>
+                </g>
+                </svg>
+            </div>
+            <div class="story-bottom">
+                <p class="story-motto">SHOW UP. TEAM UP. LEVEL UP.</p>
+                <footer class="login-foot"><span>NSBM GREEN UNIVERSITY</span><span>HOMAGAMA, SRI LANKA</span></footer>
+            </div>
+        </section>
+
+        <section class="login-panel">
+            <div class="login-form-wrap">
+                <span class="eyebrow">LET’S GET YOU IN THE GAME</span>
+                <h2 id="login-heading">Welcome back.</h2>
+                <p class="muted login-intro">Sign in to your SportsHub workspace.</p>
+                
+                <!-- Plain HTML Form -->
+                <form id="login-form">
+                    <div class="field">
+                        <label for="email">University email</label>
+                        <input id="email" name="email" type="email" required autocomplete="username" placeholder="you@university.ac.lk">
+                    </div>
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="Enter your password">
+                    </div>
+                    <div class="form-error" role="alert"></div>
+                    <button type="submit" class="btn btn-primary login-submit"><span>Sign in</span><span aria-hidden="true">→</span></button>
+                </form>
+                <div class="login-signoff">
+                    <p>Your university, in motion.</p>
+                    <p>Clubs · Training · Tournaments · Community</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Dedicated JS for Login only -->
+  <script type="module" src="login.js"></script>
+</body>
+</html>
