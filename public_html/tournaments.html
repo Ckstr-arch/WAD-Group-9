@@ -1,1 +1,52 @@
-//World
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tournaments & Results · NSBM SportsHub</title>
+  <link rel="stylesheet" href="student-dashboard.css">
+</head>
+<body data-require="any">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">ϟ</span>
+        <span>NSBM<span class="brand-sub">SPORTSHUB</span></span>
+      </div>
+      <nav class="nav-list">
+        <a href="student-dashboard.html">Student Portal</a>
+        <a href="clubs.html">Clubs & Memberships</a>
+        <a href="tournaments.html" class="active">Tournaments & Results</a>
+        <a href="index.html" id="logout-btn">Sign out</a>
+      </nav>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">COMPETITION & SCORES</span>
+          <h1>Tournaments & Live Results</h1>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="card">
+          <h2>Active Tournaments & Match Results</h2>
+          <p class="muted">Check real-time brackets, schedules, and past match results.</p>
+          <div class="feed-list" style="margin-top: 15px;">
+            <div class="feed-item">
+              <strong>Inter-Faculty Championship Finals</strong>
+              <p class="muted">Status: Scheduled for Saturday · Venue: Indoor Stadium</p>
+            </div>
+            <div class="feed-item">
+              <strong>Taekwon-Do Sparring Tournament Results</strong>
+              <p class="muted">Faculty of Computing secured 1st place in team patterns.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="services/guard.js"></script>
+</body>
+</html>
