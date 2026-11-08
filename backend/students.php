@@ -1,6 +1,8 @@
 <?php
+declare(strict_types=1);
+require_once __DIR__ . '/../config/database.php';
 
-if (request_method() !== 'GET') {
+if (request_method() !== 'GET') {git  add <div class=""></div>
     method_not_allowed(['GET']);
 }
 require_admin();
