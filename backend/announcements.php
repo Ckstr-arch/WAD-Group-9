@@ -1,9 +1,4 @@
 <?php
-/**
- * api/announcements.php
- *   GET  [?limit=20]          campus feed, newest first (any signed-in user)
- *   POST { title, content }   admin publishes an announcement ("body"/"message" accepted as aliases)
- */
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
