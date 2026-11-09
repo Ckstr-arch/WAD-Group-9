@@ -1,8 +1,8 @@
 :root {
-    --primary: #202935;
-    --accent: #2d6aec;
-    --bg: #f4f4f5;
-    --text: #121b2e;
+    --primary: #202833;
+    --accent: #3971e9;
+    --bg: #ffffff;
+    --text: #121b2c;
 }
 
 * { box-sizing: border-box; }
@@ -16,7 +16,7 @@ body {
 
 header {
     background: var(--primary);
-    color: #f4f4f5;
+    color: #fcfcff;
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -24,7 +24,7 @@ header {
 }
 
 header nav a {
-    color: #f4f4f5;
+    color: #fcfcfc;
     text-decoration: none;
     margin-left: 1rem;
 }
