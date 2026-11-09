@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Schedule - NSBM SportsHub</title>
+</head>
+<body>
+<nav class="navbar">
+  <div class="logo">NSBM <span>SportsHub</span></div>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="clubs.html">Clubs</a></li>
+    <li><a href="training-schedule.html" class="active">Schedule</a></li>
+    <li><a href="fixtures.html">Fixtures</a></li>
+    <li><a href="tournaments.html">Tournaments</a></li>
+    <li><a href="results.html">Results</a></li>
+    <li><a href="book-facilities.html">Facilities</a></li>
+  </ul>
+  <div class="nav-right">Student ▾</div>
+</nav>
+
+<header class="page-header">
+  <h1>Training Schedule</h1>
+  <p>Upcoming training sessions for all NSBM sports clubs.</p>
+</header>
+
+<main class="container">
+  <section class="timetable">
+    <h2>Practice sessions schedule of sports club - 2026</h2>
+    <a href="pictures/Time Table.png" target="_blank">
+      <img class="timetable-img" src="pictures/Time Table.png" alt="Practice sessions schedule of sports clubs 2026">
+    </a>
+  </section>
+
+  <div class="filter-bar">
+    <button class="chip active" data-filter="all">All Days</button>
+    <button class="chip" data-filter="monday">Monday</button>
+    <button class="chip" data-filter="tuesday">Tuesday</button>
+    <button class="chip" data-filter="wednesday">Wednesday</button>
+    <button class="chip" data-filter="thursday">Thursday</button>
+    <button class="chip" data-filter="friday">Friday</button>
+  </div>
+  <div class="schedule-list" id="scheduleList"></div>
+</main>
+</body>
+</html>
