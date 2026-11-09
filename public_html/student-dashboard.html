@@ -1,1 +1,69 @@
-//World
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student Portal · NSBM SportsHub</title>
+  <link rel="stylesheet" href="student-dashboard.css">
+</head>
+<body data-require="student">
+  <div class="app-shell">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">ϟ</span>
+        <span>NSBM<span class="brand-sub">SPORTSHUB</span></span>
+      </div>
+      <nav class="nav-list">
+        <a href="student-dashboard.html" class="active">Student Portal</a>
+        <a href="clubs.html">Clubs</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="index.html" id="logout-btn">Sign out</a>
+      </nav>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">STUDENT DASHBOARD</span>
+          <h1 id="welcome-msg">Welcome, Student</h1>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Quick Stats / Info -->
+        <div class="cards-grid">
+          <div class="card">
+            <h3>My Registered Clubs</h3>
+            <div id="clubs-container">
+              <p class="muted">Loading memberships...</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Upcoming Bookings</h3>
+            <div id="bookings-container">
+              <p class="muted">Loading bookings...</p>
+            </div>
+            <button class="btn btn-primary" id="book-btn">Book a Facility</button>
+          </div>
+        </div>
+
+        <!-- Campus Sports Feed -->
+        <div class="card" style="margin-top: 24px;">
+          <h2>Campus Sports Feed</h2>
+          <p class="muted">Latest updates and announcements from your university sports community.</p>
+          <div class="feed-list" id="feed-container">
+            <div class="feed-item">
+              <strong>Loading announcements...</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="services/guard.js"></script>
+  <script type="module" src="student-dashboard.js"></script>
+</body>
+</html>
