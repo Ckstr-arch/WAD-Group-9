@@ -24,7 +24,7 @@ if (!function_exists('current_user')) {
         }
 
         $stmt = db()->prepare(
-            'SELECT id, name, email, role, status FROM users WHERE id = ? LIMIT 1'
+            'SELECT id, student_id, name, email, role, avatar_initials, is_active FROM users WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
@@ -39,9 +39,7 @@ $action = strtolower((string) ($_GET['action'] ?? ''));
 /* ---------- Session check ---------- */
 if ($method === 'GET') {
     $user = current_user();
-    if ($user === null) {
-        json_error('Not authenticated.', 401);
-    }
+    if ($user === null || !(int) $user['is_active']) json_error('Not authenticated.', 401);
     json_response(['success' => true, 'user' => $user]);
 }
 
@@ -77,7 +75,7 @@ if ($method === 'POST') {
     }
 
     $stmt = db()->prepare(
-        'SELECT id, name, email, password_hash, role, status FROM users WHERE email = ? LIMIT 1'
+        'SELECT id, name, email, password_hash, role, is_active FROM users WHERE email = ? LIMIT 1'
     );
     $stmt->execute([$email]);
     $row = $stmt->fetch();
@@ -89,7 +87,7 @@ if ($method === 'POST') {
     if (!$valid) {
         json_error('Invalid email or password.', 401);
     }
-    if ($row['status'] !== 'approved') {
+    if (!(int) $row['is_active']) {
         json_error('This account is not active. Please contact an administrator.', 403);
     }
 
@@ -108,7 +106,7 @@ if ($method === 'POST') {
             'name'   => $row['name'],
             'email'  => $row['email'],
             'role'   => $row['role'],
-            'status' => $row['status'],
+            'is_active' => (int) $row['is_active'],
         ],
     ]);
 }

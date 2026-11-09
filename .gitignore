@@ -1,5 +1,6 @@
 # Config / secrets
 /config/config.php
+public_html/backend/config/env.local.php
 .env
 
 # OS files

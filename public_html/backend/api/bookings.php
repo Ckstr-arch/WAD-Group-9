@@ -1,20 +1,20 @@
 <?php
 /**
  * api/bookings.php
- *   GET    [?status=pending|approved|rejected]   admin: all bookings, student: own bookings
- *   POST   { facility_name, date_time }          student (or admin) creates a booking -> pending
- *   PUT    { id, status }                        admin approves / rejects (POST with "id" also works)
+ *   GET    [?status=pending|confirmed|cancelled|completed] admin: all, student: own
+ *   POST   { facility, sport, booking_date, start_time, end_time, notes }
+ *   PUT    { id, status }                        admin confirms / cancels
  *   DELETE ?id=                                  cancel a booking (owner while pending, or admin)
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
-const BOOKING_STATUSES = ['pending', 'approved', 'rejected'];
+const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
-const BOOKING_SELECT = 'SELECT b.id, b.student_id, u.name AS student_name, b.facility_name,
-                               b.date_time, b.status, b.created_at
+const BOOKING_SELECT = 'SELECT b.id, b.booked_by AS student_id, u.name AS student_name, b.facility,
+                           b.sport, b.booking_date, b.start_time, b.end_time, b.status, b.notes, b.created_at
                         FROM bookings b
-                        JOIN users u ON u.id = b.student_id';
+                        JOIN users u ON u.id = b.booked_by';
 
 function find_booking(int $id): ?array
 {
@@ -33,8 +33,8 @@ if ($method === 'GET') {
     $where  = [];
     $params = [];
 
-    if ($user['role'] !== 'admin') {
-        $where[]  = 'b.student_id = ?';
+    if (!in_array($user['role'], ['sports_admin', 'super_admin'], true)) {
+        $where[]  = 'b.booked_by = ?';
         $params[] = $user['id'];
     }
     $status = clean_text($_GET['status'] ?? '');
@@ -81,28 +81,33 @@ if ($isUpdate) {
 
 /* ---------- POST: create ---------- */
 if ($method === 'POST') {
-    $facility = clean_text($body['facility_name'] ?? '');
-    $rawDate  = clean_text($body['date_time'] ?? '');
+    $facility = clean_text($body['facility'] ?? '');
+    $sport = clean_text($body['sport'] ?? '');
+    $date = clean_text($body['booking_date'] ?? '');
+    $start = clean_text($body['start_time'] ?? '');
+    $end = clean_text($body['end_time'] ?? '');
+    $notes = clean_text($body['notes'] ?? '');
 
-    if ($facility === '' || $rawDate === '') {
-        json_error('facility_name and date_time are required.', 400);
+    if ($facility === '' || $sport === '' || $date === '' || $start === '' || $end === '') {
+        json_error('Facility, sport, date, start time and end time are required.', 400);
     }
     if (text_length($facility) > 150) {
-        json_error('facility_name must be 150 characters or fewer.', 400);
+        json_error('facility must be 150 characters or fewer.', 400);
     }
-    try {
-        $when = new DateTimeImmutable($rawDate);
-    } catch (Exception) {
-        json_error('date_time is not a valid date.', 400);
-    }
-    if ($when < new DateTimeImmutable('now')) {
-        json_error('date_time must be in the future.', 400);
-    }
+    $when = DateTimeImmutable::createFromFormat('Y-m-d H:i', "$date $start");
+    $finish = DateTimeImmutable::createFromFormat('Y-m-d H:i', "$date $end");
+    if (!$when || !$finish || $finish <= $when || $when < new DateTimeImmutable('now')) json_error('The booking date and time are invalid.', 400);
+    $stmt = db()->prepare('SELECT name FROM facilities WHERE name = ?');
+    $stmt->execute([$facility]);
+    if (!$stmt->fetch()) json_error('Facility not found.', 404);
+    $stmt = db()->prepare("SELECT id FROM bookings WHERE facility = ? AND booking_date = ? AND status IN ('pending', 'confirmed') AND start_time < ? AND end_time > ? LIMIT 1");
+    $stmt->execute([$facility, $date, $finish->format('H:i:s'), $when->format('H:i:s')]);
+    if ($stmt->fetch()) json_error('That facility is already booked for the selected time.', 409);
 
     $stmt = db()->prepare(
-        "INSERT INTO bookings (student_id, facility_name, date_time, status) VALUES (?, ?, ?, 'pending')"
+        "INSERT INTO bookings (facility, booked_by, sport, booking_date, start_time, end_time, status, notes) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
     );
-    $stmt->execute([$user['id'], $facility, $when->format('Y-m-d H:i:s')]);
+    $stmt->execute([$facility, $user['id'], $sport, $date, $when->format('H:i:s'), $finish->format('H:i:s'), $notes]);
     json_response(['success' => true, 'data' => find_booking((int) db()->lastInsertId())], 201);
 }
 
@@ -116,7 +121,7 @@ if ($method === 'DELETE') {
     if ($booking === null) {
         json_error('Booking not found.', 404);
     }
-    if ($user['role'] !== 'admin') {
+    if (!in_array($user['role'], ['sports_admin', 'super_admin'], true)) {
         if ((int) $booking['student_id'] !== $user['id']) {
             json_error('You can only cancel your own bookings.', 403);
         }

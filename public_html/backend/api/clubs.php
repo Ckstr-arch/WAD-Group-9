@@ -136,6 +136,8 @@ if ($method === 'POST') {
     // Admin: create a club
     require_admin();
     $name = clean_text($body['name'] ?? '');
+    $sport = clean_text($body['sport'] ?? 'General');
+    $president = clean_text($body['president'] ?? $user['name']);
     $desc = clean_text($body['description'] ?? '');
 
     if ($name === '' || $desc === '') {
@@ -150,8 +152,8 @@ if ($method === 'POST') {
         json_error('A club with that name already exists.', 409);
     }
 
-    $stmt = db()->prepare('INSERT INTO clubs (name, description) VALUES (?, ?)');
-    $stmt->execute([$name, $desc]);
+    $stmt = db()->prepare('INSERT INTO clubs (name, sport, president, description) VALUES (?, ?, ?, ?)');
+    $stmt->execute([$name, $sport, $president, $desc]);
     $id = (int) db()->lastInsertId();
     json_response([
         'success' => true,

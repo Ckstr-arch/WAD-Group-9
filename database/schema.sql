@@ -122,4 +122,40 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     PRIMARY KEY (limiter_key),
     KEY login_attempts_window_idx (window_started_at)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS club_memberships (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    student_id BIGINT UNSIGNED NOT NULL,
+    club_id BIGINT UNSIGNED NOT NULL,
+    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY club_membership_unique (student_id, club_id),
+    KEY club_membership_status_idx (status),
+    CONSTRAINT membership_student_fk FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT membership_club_fk FOREIGN KEY (club_id) REFERENCES clubs (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS announcements (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    title VARCHAR(150) NOT NULL,
+    content TEXT NOT NULL,
+    posted_by BIGINT UNSIGNED NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY announcements_created_idx (created_at),
+    CONSTRAINT announcement_author_fk FOREIGN KEY (posted_by) REFERENCES users (id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS inventory (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    item_name VARCHAR(120) NOT NULL,
+    total_stock INT UNSIGNED NOT NULL DEFAULT 0,
+    issued_count INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY inventory_name_unique (item_name),
+    CONSTRAINT inventory_count_check CHECK (issued_count <= total_stock)
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Uses InnoDB for reliable data storage, utf8mb4 to support all Unicode characters, and a case-insensitive collation for text comparisons.

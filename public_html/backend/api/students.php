@@ -11,7 +11,7 @@ if (request_method() !== 'GET') {
 }
 require_admin();
 
-$sql    = "SELECT id, name, email, role, status, created_at FROM users WHERE role = 'student'";
+$sql    = "SELECT id, student_id, name, email, role, is_active, created_at FROM users WHERE role = 'student'";
 $params = [];
 
 $search = clean_text($_GET['search'] ?? '');
@@ -23,11 +23,11 @@ if ($search !== '') {
 
 $status = clean_text($_GET['status'] ?? '');
 if ($status !== '') {
-    if (!in_array($status, ['approved', 'suspended'], true)) {
+    if (!in_array($status, ['active', 'inactive'], true)) {
         json_error('Invalid status filter.', 400);
     }
-    $sql .= ' AND status = ?';
-    $params[] = $status;
+    $sql .= ' AND is_active = ?';
+    $params[] = $status === 'active' ? 1 : 0;
 }
 
 $sql .= ' ORDER BY name ASC';
