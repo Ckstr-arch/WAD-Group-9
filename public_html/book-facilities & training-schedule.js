@@ -53,22 +53,22 @@ const trainingSessions = [
 
 
 const facilities = [
-  { id: "cricket", name: "Cricket", img: "pictures/Cricket.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "basketball-court", name: "Basketball Court", img: "pictures/Indoor Court.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "tennis-court", name: "Tennis Court", img: "pictures/Table Tennis.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "swimming-pool", name: "Swimming Pool", img: "pictures/Swimming Pool.jpg", desc: "NSBM Swimming Pool" },
-  { id: "badminton-hall", name: "Badminton Court", img: "pictures/Badminton.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "athletics-track", name: "Athletics Track", img: "pictures/Athletic.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "netball-court", name: "Netball", img: "pictures/Netball.jpg", desc: "NSBM Phase 01 Ground" },
-  { id: "football-court", name: "Football", img: "pictures/Football.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "rugby", name: "Rugby", img: "pictures/Rugby.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "calisthenics", name: "Calisthenics", img: "pictures/Calisthenics.jpg", desc: "NSBM Phase 02 Ground (Outdoor Gym)" },
-  { id: "archery", name: "Archery", img: "pictures/Archery.jpg", desc: "NSBM Phase 01 Ground" },
-  { id: "hockey", name: "Hockey", img: "pictures/Hockey.jpg", desc: "NSBM Phase 01 Ground" },
-  { id: "taekwondo", name: "Taekwondo", img: "pictures/Taekwondo.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "karate", name: "Karate", img: "pictures/Karate.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "powerlifting", name: "Powerlifting", img: "pictures/Powerlifting.jpg", desc: "NSBM Gymnasium" },
-  { id: "chess", name: "Chess", img: "pictures/Chess.jpg", desc: "FOC - L - 104" }
+  { id: "cricket", name: "Cricket", img: "assets/pictures/Cricket.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "basketball-court", name: "Basketball Court", img: "assets/pictures/Indoor Court.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "tennis-court", name: "Tennis Court", img: "assets/pictures/Table Tennis.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "swimming-pool", name: "Swimming Pool", img: "assets/pictures/Swimming Pool.jpg", desc: "NSBM Swimming Pool" },
+  { id: "badminton-hall", name: "Badminton Court", img: "assets/pictures/Badminton.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "athletics-track", name: "Athletics Track", img: "assets/pictures/Athletic.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "netball-court", name: "Netball", img: "assets/pictures/Netball.jpg", desc: "NSBM Phase 01 Ground" },
+  { id: "football-court", name: "Football", img: "assets/pictures/Football.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "rugby", name: "Rugby", img: "assets/pictures/Rugby.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "calisthenics", name: "Calisthenics", img: "assets/pictures/Calisthenics.jpg", desc: "NSBM Phase 02 Ground (Outdoor Gym)" },
+  { id: "archery", name: "Archery", img: "assets/pictures/Archery.jpg", desc: "NSBM Phase 01 Ground" },
+  { id: "hockey", name: "Hockey", img: "assets/pictures/Hockey.jpg", desc: "NSBM Phase 01 Ground" },
+  { id: "taekwondo", name: "Taekwondo", img: "assets/pictures/Taekwondo.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "karate", name: "Karate", img: "assets/pictures/Karate.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "powerlifting", name: "Powerlifting", img: "assets/pictures/Powerlifting.jpg", desc: "NSBM Gymnasium" },
+  { id: "chess", name: "Chess", img: "assets/pictures/Chess.jpg", desc: "FOC - L - 104" }
 ];
 
 
