@@ -3,11 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Student Portal · NSBM SportsHub</title>
- 
+  <title>Clubs & Memberships · NSBM SportsHub</title>
+  <link rel="stylesheet" href="student-dashboard.css">
 </head>
-<body>
+<body data-require="any">
+  <div class="app-shell">
+    
+      <div class="brand">
+        <span class="brand-mark">ϟ</span>
+        <span>NSBM<span class="brand-sub">SPORTSHUB</span></span>
+      </div>
 
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">COMMUNITY</span>
+          <h1>University Clubs & Memberships</h1>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="cards-grid" id="clubs-grid">
+          <div class="card">
+            <h3>ITF Taekwon-Do Club</h3>
+            <p class="muted">Master self-defense, forms, and sparring conditioning.</p>
+            <span class="badge badge-success">Joined</span>
+          </div>
+          <div class="card">
+            <h3>NSBM Cricket Club</h3>
+            <p class="muted">Inter-faculty matches and professional coaching.</p>
+            <button class="btn btn-primary" onclick="alert('Membership requested!')">Join Club</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 </body>
-
 </html>
