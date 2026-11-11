@@ -54,7 +54,7 @@ if ($method === 'PUT') {
 
         if ($total === null || $issued === null) {
             $pdo->rollBack();
-            json_error('Stock values must be whole numbers of 0 or more.', 400);
+            json_error('Stock values must be whole numbers between 0 and 4294967295.', 400);
         }
         if ($issued > $total) {
             $pdo->rollBack();
@@ -86,7 +86,7 @@ if ($method === 'POST') {
         json_error('item_name must be 120 characters or fewer.', 400);
     }
     if ($total === null) {
-        json_error('total_stock must be a whole number of 0 or more.', 400);
+        json_error('total_stock must be a whole number between 0 and 4294967295.', 400);
     }
     $stmt = db()->prepare('SELECT id FROM inventory WHERE item_name = ?');
     $stmt->execute([$name]);

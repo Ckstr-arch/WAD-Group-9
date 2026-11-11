@@ -1,9 +1,8 @@
 name: Deploy NSBM SportsHub to InfinityFree
 
 on:
-  push:
-    branches:
-      - main
+  # Legacy hosting: never deploy automatically on a push.
+  workflow_dispatch:
 
 jobs:
   web-deploy:
@@ -21,4 +20,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./public_html/
           server-dir: /htdocs/
-          dangerous-clean-slate: true
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            backend/config/env.local.php

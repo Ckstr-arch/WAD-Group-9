@@ -8,8 +8,12 @@ try {
   document.querySelectorAll('[data-user-name]').forEach((el) => { el.textContent = user.name; });
   document.querySelectorAll('#logout-btn').forEach((button) => button.addEventListener('click', async (e) => {
     e.preventDefault();
-    await post('auth.php?action=logout', {});
-    window.location.href = 'index.html';
+    try {
+      await post('auth.php?action=logout', {});
+      window.location.href = 'index.html';
+    } catch (error) {
+      alert(error.message);
+    }
   }));
 } catch {
   window.location.href = 'index.html';

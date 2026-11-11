@@ -104,11 +104,13 @@ if ($method === 'POST') {
         if ($clubId === null) {
             json_error('A valid club_id is required.', 400);
         }
-        $stmt = db()->prepare('SELECT id FROM clubs WHERE id = ?');
+        $stmt = db()->prepare('SELECT id, status FROM clubs WHERE id = ?');
         $stmt->execute([$clubId]);
-        if (!$stmt->fetch()) {
+        $club = $stmt->fetch();
+        if (!$club) {
             json_error('Club not found.', 404);
         }
+        if ($club['status'] !== 'active') json_error('This club is not accepting membership requests.', 409);
 
         $stmt = db()->prepare('SELECT id, status FROM club_memberships WHERE student_id = ? AND club_id = ?');
         $stmt->execute([$user['id'], $clubId]);
@@ -145,6 +147,9 @@ if ($method === 'POST') {
     }
     if (text_length($name) > 120) {
         json_error('Club name must be 120 characters or fewer.', 400);
+    }
+    if (text_length($sport) > 80 || text_length($president) > 120 || strlen($desc) > 65535) {
+        json_error('Sport, president or description exceed the allowed length.', 400);
     }
     $stmt = db()->prepare('SELECT id FROM clubs WHERE name = ?');
     $stmt->execute([$name]);

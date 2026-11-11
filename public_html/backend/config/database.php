@@ -1,11 +1,17 @@
 <?php
 declare(strict_types=1);
 
+ini_set('display_errors', '0');
+set_exception_handler(static function (Throwable $error): void {
+    json_error('The server could not complete the request. Please try again later.', 500);
+});
+
 if (is_file(__DIR__ . '/env.local.php')) {
     require_once __DIR__ . '/env.local.php';
 }
 
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+validate_request_origin($secure);
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
@@ -36,14 +42,54 @@ function db(): PDO
 }
 
 function request_method(): string { return strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'); }
-function read_json_body(): array {
-    $value = json_decode(file_get_contents('php://input') ?: '', true);
-    return is_array($value) ? $value : [];
+function validate_request_origin(bool $secure): void {
+    if (!in_array(request_method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) return;
+
+    $source = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
+    if ($source !== '') {
+        $origin = parse_url($source);
+        $target = parse_url(($secure ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? ''));
+        $originScheme = strtolower($origin['scheme'] ?? '');
+        $targetScheme = $secure ? 'https' : 'http';
+        if (!$origin || !$target || $originScheme !== $targetScheme
+            || strtolower($origin['host'] ?? '') !== strtolower($target['host'] ?? '')
+            || ($origin['port'] ?? ($originScheme === 'https' ? 443 : 80)) !== ($target['port'] ?? ($secure ? 443 : 80))) {
+            json_error('Cross-origin requests are not allowed.', 403);
+        }
+    } elseif (in_array($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '', ['cross-site', 'same-site'], true)) {
+        json_error('Cross-origin requests are not allowed.', 403);
+    }
+
+    if (in_array(request_method(), ['POST', 'PUT', 'PATCH'], true)) {
+        $contentType = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
+        if ($contentType !== 'application/json') json_error('Content-Type must be application/json.', 415);
+    }
 }
-function clean_text(mixed $value): string { return trim(strip_tags((string) ($value ?? ''))); }
+function read_json_body(): array {
+    $raw = trim(file_get_contents('php://input') ?: '');
+    try {
+        $value = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $error) {
+        json_error('A valid JSON object is required.', 400);
+    }
+    if (($raw[0] ?? '') !== '{' || !is_array($value)) json_error('A valid JSON object is required.', 400);
+    return $value;
+}
+function clean_text(mixed $value): string {
+    if ($value !== null && !is_scalar($value)) json_error('Text fields must contain scalar values.', 400);
+    return trim(strip_tags((string) ($value ?? '')));
+}
 function text_length(string $value): int { return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value); }
-function to_id(mixed $value): ?int { return is_numeric($value) && (int) $value > 0 ? (int) $value : null; }
-function to_count(mixed $value): ?int { return is_numeric($value) && (int) $value >= 0 && (string) (int) $value === (string) $value ? (int) $value : null; }
+function to_id(mixed $value): ?int {
+    if ((!is_int($value) && !is_string($value)) || !preg_match('/^[1-9][0-9]*$/D', (string) $value)) return null;
+    $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    return $id === false ? null : $id;
+}
+function to_count(mixed $value): ?int {
+    if ((!is_int($value) && !is_string($value)) || !preg_match('/^(0|[1-9][0-9]*)$/D', (string) $value)) return null;
+    $count = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 4294967295]]);
+    return $count === false ? null : $count;
+}
 
 function json_response(array $payload, int $status = 200): never {
     http_response_code($status);

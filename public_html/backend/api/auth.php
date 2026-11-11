@@ -65,7 +65,9 @@ if ($method === 'DELETE' || ($method === 'POST' && $action === 'logout')) {
 if ($method === 'POST') {
     $body     = read_json_body();
     $email    = strtolower(clean_text($body['email'] ?? ''));
-    $password = (string) ($body['password'] ?? '');
+    $password = $body['password'] ?? '';
+
+    if (!is_string($password)) json_error('Password must be a string.', 400);
 
     if ($email === '' || $password === '') {
         json_error('Email and password are required.', 400);
@@ -74,30 +76,63 @@ if ($method === 'POST') {
         json_error('Please enter a valid email address.', 400);
     }
 
-    $stmt = db()->prepare(
-        'SELECT id, name, email, password_hash, role, is_active FROM users WHERE email = ? LIMIT 1'
-    );
-    $stmt->execute([$email]);
-    $row = $stmt->fetch();
+    $pdo = db();
+    $limiterKey = hash('sha256', $email . "\0" . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+    $pdo->beginTransaction();
+    try {
+        // Lock one account/IP counter so parallel requests cannot bypass the limit.
+        $stmt = $pdo->prepare('INSERT INTO login_attempts (limiter_key, failures, window_started_at) VALUES (?, 0, NOW()) ON DUPLICATE KEY UPDATE limiter_key = login_attempts.limiter_key');
+        $stmt->execute([$limiterKey]);
+        $stmt = $pdo->prepare('SELECT failures, blocked_until, TIMESTAMPDIFF(SECOND, window_started_at, NOW()) AS elapsed, TIMESTAMPDIFF(SECOND, NOW(), blocked_until) AS retry_after FROM login_attempts WHERE limiter_key = ? FOR UPDATE');
+        $stmt->execute([$limiterKey]);
+        $attempt = $stmt->fetch();
+        $retryAfter = (int) ($attempt['retry_after'] ?? 0);
+        if ($retryAfter > 0) {
+            $pdo->rollBack();
+            header('Retry-After: ' . $retryAfter);
+            json_error('Too many login attempts. Please try again later.', 429);
+        }
+        if ((int) $attempt['elapsed'] >= 900 || $attempt['blocked_until'] !== null) {
+            $stmt = $pdo->prepare('UPDATE login_attempts SET failures = 0, window_started_at = NOW(), blocked_until = NULL WHERE limiter_key = ?');
+            $stmt->execute([$limiterKey]);
+            $attempt['failures'] = 0;
+        }
 
-    // Always run one password_verify so response time doesn't reveal whether the email exists
-    $hash  = $row['password_hash'] ?? password_hash('timing-equaliser', PASSWORD_DEFAULT);
-    $valid = password_verify($password, $hash) && $row !== false;
+        $stmt = $pdo->prepare(
+            'SELECT id, name, email, password_hash, role, is_active FROM users WHERE email = ? LIMIT 1'
+        );
+        $stmt->execute([$email]);
+        $row = $stmt->fetch();
 
-    if (!$valid) {
-        json_error('Invalid email or password.', 401);
-    }
-    if (!(int) $row['is_active']) {
-        json_error('This account is not active. Please contact an administrator.', 403);
+        // Verify a hash for unknown accounts too.
+        $hash = $row['password_hash'] ?? password_hash('timing-equaliser', PASSWORD_DEFAULT);
+        $valid = password_verify($password, $hash) && $row !== false;
+        if (!$valid) {
+            $failures = (int) $attempt['failures'] + 1;
+            $stmt = $pdo->prepare('UPDATE login_attempts SET failures = ?, blocked_until = CASE WHEN ? >= 5 THEN DATE_ADD(NOW(), INTERVAL 15 MINUTE) ELSE NULL END WHERE limiter_key = ?');
+            $stmt->execute([$failures, $failures, $limiterKey]);
+            $pdo->commit();
+            json_error('Invalid email or password.', 401);
+        }
+
+        $stmt = $pdo->prepare('UPDATE login_attempts SET failures = 0, window_started_at = NOW(), blocked_until = NULL WHERE limiter_key = ?');
+        $stmt->execute([$limiterKey]);
+        if (!(int) $row['is_active']) {
+            $pdo->commit();
+            json_error('This account is not active. Please contact an administrator.', 403);
+        }
+        if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
+            $up = $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+            $up->execute([password_hash($password, PASSWORD_DEFAULT), $row['id']]);
+        }
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
     }
 
     session_regenerate_id(true);               // prevent session fixation
     $_SESSION['user_id'] = (int) $row['id'];
-
-    if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
-        $up = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
-        $up->execute([password_hash($password, PASSWORD_DEFAULT), $row['id']]);
-    }
 
     json_response([
         'success' => true,

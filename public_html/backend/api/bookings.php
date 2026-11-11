@@ -23,6 +23,24 @@ function find_booking(int $id): ?array
     return $stmt->fetch() ?: null;
 }
 
+function lock_facility(PDO $pdo, string $facility): void
+{
+    // Every availability-changing write locks this same existing row first.
+    $stmt = $pdo->prepare('SELECT name FROM facilities WHERE name = ? FOR UPDATE');
+    $stmt->execute([$facility]);
+    if (!$stmt->fetch()) {
+        $pdo->rollBack();
+        json_error('Facility not found.', 404);
+    }
+}
+
+function booking_conflicts(PDO $pdo, string $facility, string $date, string $start, string $end, int $excludeId = 0): bool
+{
+    $stmt = $pdo->prepare("SELECT id FROM bookings WHERE facility = ? AND booking_date = ? AND status IN ('pending', 'confirmed') AND start_time < ? AND end_time > ? AND id <> ? LIMIT 1 FOR UPDATE");
+    $stmt->execute([$facility, $date, $end, $start, $excludeId]);
+    return (bool) $stmt->fetch();
+}
+
 $method = request_method();
 $user   = require_login();
 $body   = in_array($method, ['POST', 'PUT'], true) ? read_json_body() : [];
@@ -70,12 +88,34 @@ if ($isUpdate) {
     if (!in_array($status, BOOKING_STATUSES, true)) {
         json_error('Status must be one of: ' . implode(', ', BOOKING_STATUSES) . '.', 400);
     }
-    if (find_booking($id) === null) {
+    $booking = find_booking($id);
+    if ($booking === null) {
         json_error('Booking not found.', 404);
     }
 
-    $stmt = db()->prepare('UPDATE bookings SET status = ? WHERE id = ?');
-    $stmt->execute([$status, $id]);
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        lock_facility($pdo, $booking['facility']);
+        $stmt = $pdo->prepare('SELECT id, facility, booking_date, start_time, end_time FROM bookings WHERE id = ? FOR UPDATE');
+        $stmt->execute([$id]);
+        $booking = $stmt->fetch();
+        if (!$booking) {
+            $pdo->rollBack();
+            json_error('Booking not found.', 404);
+        }
+        if (in_array($status, ['pending', 'confirmed'], true)
+            && booking_conflicts($pdo, $booking['facility'], $booking['booking_date'], $booking['start_time'], $booking['end_time'], $id)) {
+            $pdo->rollBack();
+            json_error('That facility is already booked for the selected time.', 409);
+        }
+        $stmt = $pdo->prepare('UPDATE bookings SET status = ? WHERE id = ?');
+        $stmt->execute([$status, $id]);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
     json_response(['success' => true, 'data' => find_booking($id)]);
 }
 
@@ -91,24 +131,41 @@ if ($method === 'POST') {
     if ($facility === '' || $sport === '' || $date === '' || $start === '' || $end === '') {
         json_error('Facility, sport, date, start time and end time are required.', 400);
     }
-    if (text_length($facility) > 150) {
-        json_error('facility must be 150 characters or fewer.', 400);
+    if (text_length($facility) > 64 || text_length($sport) > 80 || strlen($notes) > 65535) {
+        json_error('Facility, sport or notes exceed the allowed length.', 400);
     }
-    $when = DateTimeImmutable::createFromFormat('Y-m-d H:i', "$date $start");
-    $finish = DateTimeImmutable::createFromFormat('Y-m-d H:i', "$date $end");
-    if (!$when || !$finish || $finish <= $when || $when < new DateTimeImmutable('now')) json_error('The booking date and time are invalid.', 400);
-    $stmt = db()->prepare('SELECT name FROM facilities WHERE name = ?');
-    $stmt->execute([$facility]);
-    if (!$stmt->fetch()) json_error('Facility not found.', 404);
-    $stmt = db()->prepare("SELECT id FROM bookings WHERE facility = ? AND booking_date = ? AND status IN ('pending', 'confirmed') AND start_time < ? AND end_time > ? LIMIT 1");
-    $stmt->execute([$facility, $date, $finish->format('H:i:s'), $when->format('H:i:s')]);
-    if ($stmt->fetch()) json_error('That facility is already booked for the selected time.', 409);
+    if (!preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $date)
+        || !preg_match('/^[0-9]{2}:[0-9]{2}$/D', $start) || !preg_match('/^[0-9]{2}:[0-9]{2}$/D', $end)) {
+        json_error('The booking date and time are invalid.', 400);
+    }
+    $timezone = new DateTimeZone('Asia/Colombo');
+    $when = DateTimeImmutable::createFromFormat('!Y-m-d H:i', "$date $start", $timezone);
+    $finish = DateTimeImmutable::createFromFormat('!Y-m-d H:i', "$date $end", $timezone);
+    if (!$when || !$finish || $when->format('Y-m-d H:i') !== "$date $start"
+        || $finish->format('Y-m-d H:i') !== "$date $end" || $finish <= $when
+        || $when < new DateTimeImmutable('now', $timezone)) {
+        json_error('The booking date and time are invalid.', 400);
+    }
 
-    $stmt = db()->prepare(
-        "INSERT INTO bookings (facility, booked_by, sport, booking_date, start_time, end_time, status, notes) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
-    );
-    $stmt->execute([$facility, $user['id'], $sport, $date, $when->format('H:i:s'), $finish->format('H:i:s'), $notes]);
-    json_response(['success' => true, 'data' => find_booking((int) db()->lastInsertId())], 201);
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        lock_facility($pdo, $facility);
+        if (booking_conflicts($pdo, $facility, $date, $when->format('H:i:s'), $finish->format('H:i:s'))) {
+            $pdo->rollBack();
+            json_error('That facility is already booked for the selected time.', 409);
+        }
+        $stmt = $pdo->prepare(
+            "INSERT INTO bookings (facility, booked_by, sport, booking_date, start_time, end_time, status, notes) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
+        );
+        $stmt->execute([$facility, $user['id'], $sport, $date, $when->format('H:i:s'), $finish->format('H:i:s'), $notes]);
+        $id = (int) $pdo->lastInsertId();
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
+    json_response(['success' => true, 'data' => find_booking($id)], 201);
 }
 
 /* ---------- DELETE: cancel ---------- */
