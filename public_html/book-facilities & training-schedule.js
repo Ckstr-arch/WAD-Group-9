@@ -1,3 +1,7 @@
+/*
+Weekly recurring schedule based on the actual sports practice
+schedules displayed on the NSBM Recreation Centre notice board.
+*/
 const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 const trainingSessions = [
@@ -47,35 +51,26 @@ const trainingSessions = [
   { day: "Friday", sport: "Chess", time: "9:00 AM - 12:00 PM", venue: "FOC - L - 104", club: "chess" }
 ];
 
-
-
-
-
-
 const facilities = [
-  { id: "cricket", name: "Cricket", img: "pictures/Cricket.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "basketball-court", name: "Basketball Court", img: "pictures/Indoor Court.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "tennis-court", name: "Tennis Court", img: "pictures/Table Tennis.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "swimming-pool", name: "Swimming Pool", img: "pictures/Swimming Pool.jpg", desc: "NSBM Swimming Pool" },
-  { id: "badminton-hall", name: "Badminton Court", img: "pictures/Badminton.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "athletics-track", name: "Athletics Track", img: "pictures/Athletic.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "netball-court", name: "Netball", img: "pictures/Netball.jpg", desc: "NSBM Phase 01 Ground" },
-  { id: "football-court", name: "Football", img: "pictures/Football.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "rugby", name: "Rugby", img: "pictures/Rugby.jpg", desc: "NSBM Phase 02 Ground" },
-  { id: "calisthenics", name: "Calisthenics", img: "pictures/Calisthenics.jpg", desc: "NSBM Phase 02 Ground (Outdoor Gym)" },
-  { id: "archery", name: "Archery", img: "pictures/Archery.jpg", desc: "NSBM Phase 01 Ground" },
-  { id: "hockey", name: "Hockey", img: "pictures/Hockey.jpg", desc: "NSBM Phase 01 Ground" },
-  { id: "taekwondo", name: "Taekwondo", img: "pictures/Taekwondo.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "karate", name: "Karate", img: "pictures/Karate.jpg", desc: "NSBM Indoor Stadium" },
-  { id: "powerlifting", name: "Powerlifting", img: "pictures/Powerlifting.jpg", desc: "NSBM Gymnasium" },
-  { id: "chess", name: "Chess", img: "pictures/Chess.jpg", desc: "FOC - L - 104" }
+  { id: "cricket", name: "Cricket", img: "assets/pictures/Cricket.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "basketball-court", name: "Basketball Court", img: "assets/pictures/Indoor Court.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "table-tennis", name: "Table Tennis", img: "assets/pictures/Table Tennis.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "swimming-pool", name: "Swimming Pool", img: "assets/pictures/Swimming Pool.jpg", desc: "NSBM Swimming Pool" },
+  { id: "badminton-hall", name: "Badminton Court", img: "assets/pictures/Badminton.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "athletics-track", name: "Athletics Track", img: "assets/pictures/Athletic.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "netball-court", name: "Netball", img: "assets/pictures/Netball.jpg", desc: "NSBM Phase 01 Ground" },
+  { id: "football-court", name: "Football", img: "assets/pictures/Football.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "rugby", name: "Rugby", img: "assets/pictures/Rugby.jpg", desc: "NSBM Phase 02 Ground" },
+  { id: "calisthenics", name: "Calisthenics", img: "assets/pictures/Calisthenics.jpg", desc: "NSBM Phase 02 Ground (Outdoor Gym)" },
+  { id: "archery", name: "Archery", img: "assets/pictures/Archery.jpg", desc: "NSBM Phase 01 Ground" },
+  { id: "hockey", name: "Hockey", img: "assets/pictures/Hockey.jpg", desc: "NSBM Phase 01 Ground" },
+  { id: "taekwondo", name: "Taekwondo", img: "assets/pictures/Taekwondo.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "karate", name: "Karate", img: "assets/pictures/Karate.jpg", desc: "NSBM Indoor Stadium" },
+  { id: "powerlifting", name: "Powerlifting", img: "assets/pictures/Powerlifting.jpg", desc: "NSBM Gymnasium" },
+  { id: "chess", name: "Chess", img: "assets/pictures/Chess.jpg", desc: "FOC - L - 104" }
 ];
 
-
-
-
-
-// Links 
+// Links each sport in the schedule to its container on the Book Facilities page
 const sportToFacility = {
   "athletics": "athletics-track",
   "cricket": "cricket",
@@ -88,14 +83,14 @@ const sportToFacility = {
   "hockey": "hockey",
   "badminton": "badminton-hall",
   "karate": "karate",
-  "table-tennis": "tennis-court",
+  "table-tennis": "table-tennis",
   "swimming": "swimming-pool",
   "calisthenics": "calisthenics",
   "taekwondo": "taekwondo",
   "chess": "chess"
 };
 
-// Training Schedule page 
+//Training Schedule page
 const scheduleList = document.getElementById("scheduleList");
 if (scheduleList) {
   function renderSchedule(filter) {
@@ -176,7 +171,14 @@ if (facilitiesGrid) {
     }
   });
 
-  let bookings = JSON.parse(localStorage.getItem("myBookings") || "[]");
+  let bookings;
+  try {
+    const savedBookings = JSON.parse(localStorage.getItem("myBookings") || "[]");
+    bookings = Array.isArray(savedBookings) ? savedBookings : [];
+  } catch (error) {
+    console.error("Could not read saved booking requests.", error);
+    bookings = [];
+  }
 
   function renderBookings() {
     bookingsBody.innerHTML = "";
@@ -194,20 +196,33 @@ if (facilitiesGrid) {
     });
   }
 
-
-  
   bookingForm.addEventListener("submit", e => {
     e.preventDefault();
     const facility = facilitySelect.value;
     const date = document.getElementById("bookingDate").value;
     const start = document.getElementById("startTime").value;
     const end = document.getElementById("endTime").value;
+    if (date < bookingDate.min) { alert("Please choose today or a future date."); return; }
     if (end <= start) { alert("End time must be after start time."); return; }
     bookings.push({ facility, date, start, end, status: "pending" });
-    localStorage.setItem("myBookings", JSON.stringify(bookings));
+    try {
+      localStorage.setItem("myBookings", JSON.stringify(bookings));
+    } catch (error) {
+      bookings.pop();
+      console.error("Could not save the booking request.", error);
+      alert("Your booking request could not be saved in this browser.");
+      return;
+    }
     renderBookings();
     bookingForm.reset();
   });
 
+  const bookingDate = document.getElementById("bookingDate");
+  const today = new Date();
+  bookingDate.min = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0")
+  ].join("-");
   renderBookings();
 }
