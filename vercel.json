@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "public_html/**/*.@(html|css|js|png|jpg|svg|ico)",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public_html/backend/api/*.php",
+      "use": "vercel-php@0.9.0"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/backend/config/(.*)",
+      "status": 403
+    },
+    {
+      "src": "/backend/api/([^.]+)$",
+      "dest": "/public_html/backend/api/$1.php"
+    },
+    {
+      "src": "/backend/api/(.*)",
+      "dest": "/public_html/backend/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public_html/$1"
+    }
+  ]
+}
