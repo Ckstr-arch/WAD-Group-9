@@ -8,79 +8,27 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
-if (!function_exists('request_method')) {
-    function request_method(): string
-    {
-        return strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-    }
-}
-
-if (!function_exists('read_json_body')) {
-    function read_json_body(): array
-    {
-        if (!empty($_POST)) {
-            return $_POST;
-        }
-        $raw = file_get_contents('php://input');
-        if ($raw === false || trim($raw) === '') {
-            return [];
-        }
-        $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : [];
-    }
-}
-
-if (!function_exists('clean_text')) {
-    function clean_text(mixed $value): string
-    {
-        return trim((string) ($value ?? ''));
-    }
-}
-
-if (!function_exists('json_response')) {
-    function json_response(array $data, int $status = 200): never
-    {
-        http_response_code($status);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data);
-        exit;
-    }
-}
-
-if (!function_exists('json_error')) {
-    function json_error(string $message, int $status = 400): never
-    {
-        json_response(['success' => false, 'error' => $message, 'message' => $message], $status);
-    }
-}
-
-if (!function_exists('current_user')) {
-    function current_user(): ?array
-    {
-        $userId = (int) ($_SESSION['user_id'] ?? 0);
-        if ($userId < 1) {
-            return null;
-        }
-
-        $stmt = db()->prepare(
-            'SELECT id, student_id, name, email, role, avatar_initials, is_active FROM users WHERE id = ? AND is_active = 1 LIMIT 1'
-        );
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
-
-        return $user ?: null;
-    }
-}
-
 $method = request_method();
-$action = strtolower((string) ($_GET['action'] ?? ''));
+$action = strtolower(clean_text($_GET['action'] ?? ''));
 
 /* ---------- Session check ---------- */
 if ($method === 'GET') {
-    $user = current_user();
-    if ($user === null) {
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    if ($userId < 1) {
         json_error('Not authenticated.', 401);
     }
+
+    $stmt = db()->prepare(
+        'SELECT id, student_id, name, email, role, avatar_initials, is_active FROM users WHERE id = ? AND is_active = 1 LIMIT 1'
+    );
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        json_error('Not authenticated.', 401);
+    }
+
+    $user['id'] = (int) $user['id'];
+    $user['is_active'] = (int) $user['is_active'];
     json_response(['success' => true, 'user' => $user]);
 }
 
@@ -91,10 +39,10 @@ if ($method === 'DELETE' || ($method === 'POST' && $action === 'logout')) {
         $p = session_get_cookie_params();
         setcookie(session_name(), '', [
             'expires'  => time() - 42000,
-            'path'     => $p['path'],
-            'domain'   => $p['domain'],
-            'secure'   => $p['secure'],
-            'httponly' => $p['httponly'],
+            'path'     => $p['path'] ?: '/',
+            'domain'   => $p['domain'] ?: '',
+            'secure'   => (bool) $p['secure'],
+            'httponly' => (bool) $p['httponly'],
             'samesite' => $p['samesite'] ?: 'Lax',
         ]);
     }
@@ -121,8 +69,7 @@ if ($method === 'POST') {
     $stmt->execute([$email]);
     $row = $stmt->fetch();
 
-    // Always run one password_verify so response time doesn't reveal whether the email exists
-    $hash  = $row['password_hash'] ?? password_hash('timing-equaliser', PASSWORD_DEFAULT);
+    $hash  = $row['password_hash'] ?? '$2y$10$usesomesillystringfore7hGtcsd/.uPmIt52zy.d.uPmIt52zy.d';
     $valid = password_verify($password, $hash) && $row !== false;
 
     if (!$valid) {
@@ -134,6 +81,7 @@ if ($method === 'POST') {
 
     session_regenerate_id(true);
     $_SESSION['user_id'] = (int) $row['id'];
+    $_SESSION['role']    = (string) $row['role'];
 
     if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
         $up = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
@@ -154,9 +102,4 @@ if ($method === 'POST') {
     ]);
 }
 
-if (function_exists('method_not_allowed')) {
-    method_not_allowed(['GET', 'POST', 'DELETE']);
-}
-http_response_code(405);
-header('Content-Type: application/json; charset=utf-8');
-echo json_encode(['success' => false, 'error' => 'Method not allowed.']);
+method_not_allowed(['GET', 'POST', 'DELETE']);

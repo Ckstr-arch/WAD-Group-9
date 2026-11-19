@@ -8,22 +8,25 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 
+ensure_admin_aux_tables();
+
 const INVENTORY_SELECT = 'SELECT id, item_name, item_name AS name, total_stock, total_stock AS total,
-                                 issued_count, (total_stock - issued_count) AS available, updated_at
+                                 issued_count, GREATEST(0, CAST(total_stock AS SIGNED) - CAST(issued_count AS SIGNED)) AS available,
+                                 updated_at
                           FROM inventory';
 
 function find_item(int $id): ?array
 {
-    $stmt = db()->prepare(INVENTORY_SELECT . ' WHERE id = ?');
+    $stmt = db()->prepare(INVENTORY_SELECT . ' WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     return $stmt->fetch() ?: null;
 }
 
 $method = request_method();
-$user   = require_login();
+require_login();
 
 if ($method === 'GET') {
-    $stmt = db()->query(INVENTORY_SELECT . ' ORDER BY item_name ASC');
+    $stmt = db()->query(INVENTORY_SELECT . ' ORDER BY item_name ASC, id ASC');
     json_response(['success' => true, 'data' => $stmt->fetchAll()]);
 }
 
@@ -70,14 +73,15 @@ if ($method === 'PUT') {
         }
         throw $e;
     }
+
     json_response(['success' => true, 'data' => find_item($id)]);
 }
 
 if ($method === 'POST') {
     require_admin();
     $body  = read_json_body();
-    $name  = clean_text($body['item_name'] ?? '');
-    $total = to_count($body['total_stock'] ?? 0);
+    $name  = clean_text($body['item_name'] ?? $body['name'] ?? '');
+    $total = to_count($body['total_stock'] ?? $body['total'] ?? 0);
 
     if ($name === '') {
         json_error('item_name is required.', 400);
@@ -88,7 +92,8 @@ if ($method === 'POST') {
     if ($total === null) {
         json_error('total_stock must be a whole number of 0 or more.', 400);
     }
-    $stmt = db()->prepare('SELECT id FROM inventory WHERE item_name = ?');
+
+    $stmt = db()->prepare('SELECT id FROM inventory WHERE item_name = ? LIMIT 1');
     $stmt->execute([$name]);
     if ($stmt->fetch()) {
         json_error('An item with that name already exists.', 409);

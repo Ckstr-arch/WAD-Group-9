@@ -4,12 +4,14 @@
  *   GET                         list clubs (+ member_count, and my_status for the caller)
  *   GET  ?view=my               the caller's own memberships/requests
  *   GET  ?view=requests         admin: join requests (default pending; ?status=approved|rejected|all)
- *   POST { name, description }  admin: create a club
+ *   POST { name, sport, president, description }  admin: create a club
  *   POST { club_id }            student: request to join a club
  *   PUT  { id, status }         admin: approve / reject a join request (id = club_memberships.id)
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
+
+ensure_admin_aux_tables();
 
 const MEMBERSHIP_STATUSES = ['pending', 'approved', 'rejected'];
 
@@ -21,7 +23,7 @@ const REQUEST_SELECT = 'SELECT m.id, m.student_id, u.name AS student_name, u.ema
 
 function find_request(int $id): ?array
 {
-    $stmt = db()->prepare(REQUEST_SELECT . ' WHERE m.id = ?');
+    $stmt = db()->prepare(REQUEST_SELECT . ' WHERE m.id = ? LIMIT 1');
     $stmt->execute([$id]);
     return $stmt->fetch() ?: null;
 }
@@ -63,11 +65,9 @@ if ($method === 'GET') {
     }
 
     $stmt = db()->prepare(
-        "SELECT c.id, c.name, c.description, c.created_at,
-                (SELECT COUNT(*) FROM club_memberships m
-                  WHERE m.club_id = c.id AND m.status = 'approved') AS member_count,
-                (SELECT m2.status FROM club_memberships m2
-                  WHERE m2.club_id = c.id AND m2.student_id = ?) AS my_status
+        "SELECT c.id, c.name, c.sport, c.president, c.description, c.status, c.created_at,
+                (c.member_count + (SELECT COUNT(*) FROM club_memberships m WHERE m.club_id = c.id AND m.status = 'approved')) AS member_count,
+                (SELECT m2.status FROM club_memberships m2 WHERE m2.club_id = c.id AND m2.student_id = ? LIMIT 1) AS my_status
          FROM clubs c
          ORDER BY c.name ASC"
     );
@@ -87,30 +87,48 @@ if ($method === 'PUT') {
     if (!in_array($status, MEMBERSHIP_STATUSES, true)) {
         json_error('Status must be one of: ' . implode(', ', MEMBERSHIP_STATUSES) . '.', 400);
     }
-    if (find_request($id) === null) {
+    $current = find_request($id);
+    if ($current === null) {
         json_error('Join request not found.', 404);
     }
-    $stmt = db()->prepare('UPDATE club_memberships SET status = ? WHERE id = ?');
-    $stmt->execute([$status, $id]);
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('UPDATE club_memberships SET status = ? WHERE id = ?');
+        $stmt->execute([$status, $id]);
+
+        if ($current['status'] !== 'approved' && $status === 'approved') {
+            $pdo->prepare('UPDATE clubs SET member_count = member_count + 1 WHERE id = ?')->execute([(int) $current['club_id']]);
+        } elseif ($current['status'] === 'approved' && $status !== 'approved') {
+            $pdo->prepare('UPDATE clubs SET member_count = GREATEST(0, member_count - 1) WHERE id = ?')->execute([(int) $current['club_id']]);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
     json_response(['success' => true, 'data' => find_request($id)]);
 }
 
 /* ---------- POST ---------- */
 if ($method === 'POST') {
-
     // Student: request to join
     if (array_key_exists('club_id', $body)) {
         $clubId = to_id($body['club_id']);
         if ($clubId === null) {
             json_error('A valid club_id is required.', 400);
         }
-        $stmt = db()->prepare('SELECT id FROM clubs WHERE id = ?');
+        $stmt = db()->prepare('SELECT id FROM clubs WHERE id = ? LIMIT 1');
         $stmt->execute([$clubId]);
         if (!$stmt->fetch()) {
             json_error('Club not found.', 404);
         }
 
-        $stmt = db()->prepare('SELECT id, status FROM club_memberships WHERE student_id = ? AND club_id = ?');
+        $stmt = db()->prepare('SELECT id, status FROM club_memberships WHERE student_id = ? AND club_id = ? LIMIT 1');
         $stmt->execute([$user['id'], $clubId]);
         $existing = $stmt->fetch();
 
@@ -120,9 +138,8 @@ if ($method === 'POST') {
                     ? 'You are already a member of this club.'
                     : 'You already have a pending request for this club.', 409);
             }
-            // Previously rejected: allow re-applying
-            $up = db()->prepare("UPDATE club_memberships SET status = 'pending', requested_at = NOW() WHERE id = ?");
-            $up->execute([$existing['id']]);
+            $up = db()->prepare("UPDATE club_memberships SET status = 'pending', requested_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $up->execute([(int) $existing['id']]);
             json_response(['success' => true, 'data' => find_request((int) $existing['id'])], 200);
         }
 
@@ -135,8 +152,10 @@ if ($method === 'POST') {
 
     // Admin: create a club
     require_admin();
-    $name = clean_text($body['name'] ?? '');
-    $desc = clean_text($body['description'] ?? '');
+    $name      = clean_text($body['name'] ?? '');
+    $sport     = clean_text($body['sport'] ?? 'General');
+    $president = clean_text($body['president'] ?? ($user['name'] ?? 'Campus Admin'));
+    $desc      = clean_text($body['description'] ?? '');
 
     if ($name === '' || $desc === '') {
         json_error('Club name and description are required.', 400);
@@ -144,18 +163,31 @@ if ($method === 'POST') {
     if (text_length($name) > 120) {
         json_error('Club name must be 120 characters or fewer.', 400);
     }
-    $stmt = db()->prepare('SELECT id FROM clubs WHERE name = ?');
+
+    $stmt = db()->prepare('SELECT id FROM clubs WHERE name = ? LIMIT 1');
     $stmt->execute([$name]);
     if ($stmt->fetch()) {
         json_error('A club with that name already exists.', 409);
     }
 
-    $stmt = db()->prepare('INSERT INTO clubs (name, description) VALUES (?, ?)');
-    $stmt->execute([$name, $desc]);
+    $stmt = db()->prepare(
+        "INSERT INTO clubs (name, sport, president, description, member_count, status)
+         VALUES (?, ?, ?, ?, 0, 'active')"
+    );
+    $stmt->execute([$name, $sport, $president, $desc]);
     $id = (int) db()->lastInsertId();
+
     json_response([
         'success' => true,
-        'data'    => ['id' => $id, 'name' => $name, 'description' => $desc, 'member_count' => 0],
+        'data'    => [
+            'id'           => $id,
+            'name'         => $name,
+            'sport'        => $sport,
+            'president'    => $president,
+            'description'  => $desc,
+            'member_count' => 0,
+            'status'       => 'active',
+        ],
     ], 201);
 }
 
