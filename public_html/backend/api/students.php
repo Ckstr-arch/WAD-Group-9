@@ -237,8 +237,15 @@ try {
             json_error('Admin accounts cannot be deleted.', 403);
         }
 
-        $del = $pdo->prepare('DELETE FROM users WHERE id = ?');
-        $del->execute([$id]);
+        try {
+            $del = $pdo->prepare('DELETE FROM users WHERE id = ?');
+            $del->execute([$id]);
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                json_error('Cannot delete account while it has linked bookings, club memberships, or announcements.', 409);
+            }
+            throw $e;
+        }
 
         if ($del->rowCount() < 1) {
             json_error('Student record not found.', 404);
