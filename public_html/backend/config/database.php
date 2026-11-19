@@ -5,10 +5,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function env_val(string $key, string $default = ''): string
+function env_val(string $key, string$default = ''): string
 {
     $val = getenv($key);
-    if ($val !== false && $val !== '') {
+    if ($val !== false &&$val !== '') {
         return (string) $val;
     }
     if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
@@ -28,15 +28,12 @@ function db(): PDO
     }
 
     $host = env_val('DB_HOST');
-    $port = env_val('DB_PORT', '3306');
-    $name = env_val('DB_NAME');
-    $user = env_val('DB_USER');
-    $pass = env_val('DB_PASS');
-    if ($pass === '') {
-        $pass = env_val('DB_PASSWORD');
+    $port = env_val('DB_PORT', '3306');$name = env_val('DB_NAME');
+    $user = env_val('DB_USER');$pass = env_val('DB_PASS');
+    if ($pass === '') {$pass = env_val('DB_PASSWORD');
     }
 
-    if ($host === '' || $name === '' || $user === '' || $pass === '') {
+    if ($host === '' \vert{}\vert{}$name === '' || $user === '' \vert{}\vert{}$pass === '') {
         throw new RuntimeException('Database environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASS / DB_PASSWORD) are not fully configured.');
     }
 
@@ -48,12 +45,11 @@ function db(): PDO
 
     $sslCa = env_val('DB_SSL_CA');
     if ($sslCa !== '' && is_file($sslCa)) {
-        $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+        $options[PDO::MYSQL_ATTR_SSL_CA] =$sslCa;
     }
 
     $dsn = "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4";
-    $pdo = new PDO($dsn, $user, $pass, $options);
-    $pdo->exec("SET time_zone = '+05:30'");
+    $pdo = new PDO($dsn, $user,$pass, $options);$pdo->exec("SET time_zone = '+05:30'");
 
     return $pdo;
 }
@@ -77,11 +73,11 @@ if (!function_exists('read_json_body')) {
             return $_POST;
         }
         $raw = file_get_contents('php://input');
-        if ($raw === false || trim($raw) === '') {
+        if ($raw === false \vert{}\vert{} trim($raw) === '') {
             return [];
         }
         $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded) ?$decoded : [];
     }
 }
 
@@ -105,14 +101,14 @@ if (!function_exists('text_length')) {
 if (!function_exists('to_id')) {
     function to_id(mixed $value): ?int
     {
-        if ($value === null || $value === '') {
+        if ($value === null \vert{}\vert{}$value === '') {
             return null;
         }
         if (is_int($value) || (is_string($value) && ctype_digit($value))) {
-            $intVal = (int) $value;
-            return $intVal > 0 ? $intVal : null;
+            $intVal = (int)$value;
+            return $intVal > 0 ?$intVal : null;
         }
-        if (is_numeric($value) && (int) $value > 0) {
+        if (is_numeric($value) && (int)$value > 0) {
             return (int) $value;
         }
         return null;
@@ -122,17 +118,17 @@ if (!function_exists('to_id')) {
 if (!function_exists('to_count')) {
     function to_count(mixed $value): ?int
     {
-        if ($value === null || $value === '') {
+        if ($value === null \vert{}\vert{}$value === '') {
             return null;
         }
         if (is_bool($value)) {
             return null;
         }
-        if (is_int($value) || (is_string($value) && preg_match('/^\d+$/', trim($value)))) {
-            $num = (int) $value;
-            return $num >= 0 ? $num : null;
+        if (is_int($value) \vert{}\vert{} (is_string($value) && preg_match('/^\d+$/', trim($value)))) {
+            $num = (int)$value;
+            return $num >= 0 ?$num : null;
         }
-        if (is_numeric($value) && (float) $value >= 0 && floor((float) $value) === (float) $value) {
+        if (is_numeric($value) && (float)$value >= 0 && floor((float) $value) === (float)$value) {
             return (int) $value;
         }
         return null;
@@ -140,8 +136,11 @@ if (!function_exists('to_count')) {
 }
 
 if (!function_exists('json_response')) {
-    function json_response(array $payload, int $status = 200): never
+    function json_response(array $payload, int$status = 200): never
     {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($payload, JSON_UNESCAPED_SLASHES);
@@ -150,15 +149,18 @@ if (!function_exists('json_response')) {
 }
 
 if (!function_exists('json_error')) {
-    function json_error(string $message, int $status = 400): never
+    function json_error(string $message, int$status = 400): never
     {
-        json_response(['success' => false, 'error' => $message, 'message' => $message], $status);
+        json_response(['success' => false, 'error' => $message, 'message' => $message],$status);
     }
 }
 
 if (!function_exists('method_not_allowed')) {
     function method_not_allowed(array $allowed): never
     {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         http_response_code(405);
         header('Allow: ' . implode(', ', $allowed));
         header('Content-Type: application/json; charset=utf-8');
@@ -182,13 +184,13 @@ if (!function_exists('require_login')) {
             'SELECT id, student_id, name, email, role, avatar_initials, is_active FROM users WHERE id = ? AND is_active = 1 LIMIT 1'
         );
         $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        $user =$stmt->fetch();
         if (!$user) {
             json_error('Authentication required.', 401);
         }
 
-        $user['id'] = (int) $user['id'];
-        $user['is_active'] = (int) $user['is_active'];
+        $user['id'] = (int)$user['id'];
+        $user['is_active'] = (int)$user['is_active'];
         return $user;
     }
 }
@@ -210,8 +212,7 @@ function ensure_admin_aux_tables(): void
     if ($ensured) {
         return;
     }
-    $pdo = db();
-    $pdo->exec(
+    $pdo = db();$pdo->exec(
         "CREATE TABLE IF NOT EXISTS announcements (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             title VARCHAR(150) NOT NULL,

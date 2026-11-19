@@ -47,6 +47,7 @@ const els = {
 };
 
 let resolvedApiBase = null;
+let currentAdminUser = null;
 
 function esc(str) {
   return String(str ?? '')
@@ -125,9 +126,17 @@ function setActiveTab(targetId) {
 async function ensureAdminSession() {
   try {
     const session = await api('auth.php', { method: 'GET' });
-    const user = session.user || {};
-    const role = String(user.role || '').toLowerCase();
+    const user = session.user || null;
+    currentAdminUser = user;
 
+    if (!user || !user.id) {
+      if (els.meta) {
+        els.meta.textContent = 'Not signed in — please sign in via the login page to manage records.';
+      }
+      return {};
+    }
+
+    const role = String(user.role || '').toLowerCase();
     if (role && !ADMIN_ROLES.has(role)) {
       window.location.replace('student-dashboard.html');
       return null;
@@ -172,6 +181,13 @@ async function loadStudents() {
       const facBatch = [u.faculty, u.batch_number ? `Batch ${u.batch_number}` : '']
         .filter(Boolean)
         .join(' · ') || '—';
+      const rowRole = String(u.role || 'student').toLowerCase();
+      const isProtectedAdmin = ADMIN_ROLES.has(rowRole);
+      const canDelete = !isProtectedAdmin && Number(u.id) !== Number(currentAdminUser?.id);
+
+      const deleteBtnHtml = canDelete
+        ? `<button type="button" class="btn-sm btn-reject" data-delete-student-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Delete</button>`
+        : `<span class="muted">Protected</span>`;
 
       return `
         <tr>
@@ -183,7 +199,7 @@ async function loadStudents() {
           <td><span class="badge ${badgeClass}">${esc(statusLabel)}</span></td>
           <td>
             <button type="button" class="btn-sm btn-approve" data-reset-pw-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Set Password</button>
-            <button type="button" class="btn-sm btn-reject" data-delete-student-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Delete</button>
+            ${deleteBtnHtml}
           </td>
         </tr>
       `;

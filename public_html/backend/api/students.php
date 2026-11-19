@@ -227,6 +227,16 @@ try {
             json_error('You cannot delete your own active account.', 400);
         }
 
+        $targetStmt = $pdo->prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1');
+        $targetStmt->execute([$id]);
+        $target = $targetStmt->fetch();
+        if (!$target) {
+            json_error('Student record not found.', 404);
+        }
+        if (is_admin_role((string) ($target['role'] ?? ''))) {
+            json_error('Admin accounts cannot be deleted.', 403);
+        }
+
         $del = $pdo->prepare('DELETE FROM users WHERE id = ?');
         $del->execute([$id]);
 

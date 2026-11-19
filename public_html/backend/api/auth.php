@@ -28,7 +28,7 @@ try {
             'SELECT id, student_id, name, email, role, avatar_initials, is_active FROM users WHERE id = ? AND is_active = 1 LIMIT 1'
         );
         $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        $user =$stmt->fetch();
 
         if (!$user) {
             json_response([
@@ -38,8 +38,8 @@ try {
             ]);
         }
 
-        $user['id'] = (int) $user['id'];
-        $user['is_active'] = (int) $user['is_active'];
+        $user['id'] = (int)$user['id'];
+        $user['is_active'] = (int)$user['is_active'];
 
         json_response([
             'success'       => true,
@@ -49,18 +49,16 @@ try {
     }
 
     /* ---------- Logout ---------- */
-    if ($method === 'DELETE' || ($method === 'POST' && $action === 'logout')) {
-        $_SESSION = [];
+    if ($method === 'DELETE' \vert{}\vert{} ($method === 'POST' && $action === 'logout')) {$_SESSION = [];
         if (ini_get('session.use_cookies')) {
-            $p = session_get_cookie_params();
-            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            $p = session_get_cookie_params();$isHttps = (!empty($_SERVER['HTTPS']) &&$_SERVER['HTTPS'] !== 'off')
                 || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
             setcookie(session_name(), '', [
                 'expires'  => time() - 42000,
                 'path'     => $p['path'] ?: '/',
                 'domain'   => $p['domain'] ?: '',
-                'secure'   => $isHttps || (bool) $p['secure'],
+                'secure'   => $isHttps \vert{}\vert{} (bool)$p['secure'],
                 'httponly' => (bool) $p['httponly'],
                 'samesite' => $p['samesite'] ?: 'Lax',
             ]);
@@ -72,12 +70,11 @@ try {
     }
 
     /* ---------- Login ---------- */
-    if ($method === 'POST') {
-        $body     = read_json_body();
+    if ($method === 'POST') {$body     = read_json_body();
         $email    = strtolower(clean_text($body['email'] ?? ''));
         $password = (string) ($body['password'] ?? '');
 
-        if ($email === '' || $password === '') {
+        if ($email === '' \vert{}\vert{}$password === '') {
             json_error('Email and password are required.', 400);
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -88,12 +85,11 @@ try {
             'SELECT id, student_id, name, email, password_hash, role, avatar_initials, is_active FROM users WHERE email = ? LIMIT 1'
         );
         $stmt->execute([$email]);
-        $row = $stmt->fetch();
+        $row =$stmt->fetch();
 
         $hash  = (is_array($row) && !empty($row['password_hash']))
-            ? (string) $row['password_hash']
-            : '$2y$10$usesomesillystringfore7hGtcsd/.uPmIt52zy.d.uPmIt52zy.d';
-        $valid = is_array($row) && password_verify($password, $hash);
+            ? (string) $row['password_hash'] : '$2y$10$usesomesillystringfore7hGtcsd/.uPmIt52zy.d.uPmIt52zy.d';
+        $valid = is_array($row) && password_verify($password,$hash);
 
         if (!$valid) {
             json_error('Invalid email or password.', 401);
@@ -105,12 +101,11 @@ try {
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_regenerate_id(true);
         }
-        $_SESSION['user_id'] = (int) $row['id'];
-        $_SESSION['role']    = (string) $row['role'];
+        $_SESSION['user_id'] = (int)$row['id'];
+        $_SESSION['role']    = (string)$row['role'];
 
-        if (password_needs_rehash((string) $row['password_hash'], PASSWORD_DEFAULT)) {
-            $up = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
-            $up->execute([password_hash($password, PASSWORD_DEFAULT), $row['id']]);
+        if (password_needs_rehash((string) $row['password_hash'], PASSWORD_DEFAULT)) {$up = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+            $up->execute([password_hash($password, PASSWORD_DEFAULT),$row['id']]);
         }
 
         json_response([
