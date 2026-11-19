@@ -50,9 +50,16 @@ function table_has_column(PDO $pdo, string $table, string $column): bool
     if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
         return false;
     }
-    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '` LIKE ?');
-    $stmt->execute([$column]);
-    return (bool) $stmt->fetch();
+    $stmt = $pdo->prepare(
+        'SELECT 1
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = ?
+           AND COLUMN_NAME = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$table, $column]);
+    return (bool) $stmt->fetchColumn();
 }
 
 function delete_user_and_dependencies(PDO $pdo, int $userId): bool
