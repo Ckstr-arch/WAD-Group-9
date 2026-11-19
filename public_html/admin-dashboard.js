@@ -1,4 +1,3 @@
-const API_BASE = 'backend/api';
 const ADMIN_ROLES = new Set(['admin', 'sports_admin', 'super_admin']);
 
 const els = {
@@ -38,6 +37,8 @@ const els = {
   inventoryContainer: document.getElementById('inventory-container'),
 };
 
+let resolvedApiBase = null;
+
 function esc(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
@@ -46,14 +47,45 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
+async function fetchWithTimeout(url, options = {}, ms = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, {
+      credentials: 'include',
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function resolveApiBase() {
+  if (resolvedApiBase) return resolvedApiBase;
+  for (const candidate of ['backend/api', 'api']) {
+    try {
+      const res = await fetchWithTimeout(`${candidate}/auth.php`, { method: 'GET' }, 6000);
+      const text = await res.text();
+      JSON.parse(text);
+      resolvedApiBase = candidate;
+      return resolvedApiBase;
+    } catch {
+      // try next candidate
+    }
+  }
+  resolvedApiBase = 'backend/api';
+  return resolvedApiBase;
+}
+
 async function api(path, options = {}) {
-  const res = await fetch(`${API_BASE}/${path}`, {
-    credentials: 'include',
+  const base = await resolveApiBase();
+  const res = await fetchWithTimeout(`${base}/${path}`, {
+    ...options,
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     },
-    ...options,
   });
 
   const text = await res.text();
@@ -61,7 +93,7 @@ async function api(path, options = {}) {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error(text.trim() || `HTTP ${res.status}`);
+    throw new Error(`Invalid response (${res.status}) from ${base}/${path}`);
   }
 
   if (!res.ok || data.success === false) {
@@ -82,23 +114,33 @@ function setActiveTab(targetId) {
 }
 
 async function ensureAdminSession() {
-  const session = await api('auth.php', { method: 'GET' });
-  const user = session.user || {};
-  if (!ADMIN_ROLES.has(String(user.role || '').toLowerCase())) {
-    window.location.replace('student-dashboard.html');
-    return null;
+  try {
+    const session = await api('auth.php', { method: 'GET' });
+    const user = session.user || {};
+    const role = String(user.role || '').toLowerCase();
+
+    if (role && !ADMIN_ROLES.has(role)) {
+      window.location.replace('student-dashboard.html');
+      return null;
+    }
+
+    if (els.welcome && user.name) {
+      els.welcome.textContent = `Welcome, ${user.name}`;
+    }
+    if (els.meta) {
+      els.meta.textContent = `${user.email || 'Admin'} · Role: ${user.role || 'admin'}`;
+    }
+    return user;
+  } catch (err) {
+    if (els.meta) {
+      els.meta.textContent = `Session check: ${err.message}`;
+    }
+    return {};
   }
-  if (els.welcome && user.name) {
-    els.welcome.textContent = `Welcome, ${user.name}`;
-  }
-  if (els.meta) {
-    els.meta.textContent = `${user.email || ''} · Role: ${user.role || 'admin'}`;
-  }
-  return user;
 }
 
 async function loadStudents() {
-  els.studentsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">Loading students...</td></tr>';
+  if (!els.studentsBody) return;
   try {
     const params = new URLSearchParams();
     const q = els.studentSearch?.value.trim() || '';
@@ -110,7 +152,7 @@ async function loadStudents() {
     const rows = Array.isArray(res.data) ? res.data : [];
 
     if (!rows.length) {
-      els.studentsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No matching student accounts found.</td></tr>';
+      els.studentsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
       return;
     }
 
@@ -128,13 +170,13 @@ async function loadStudents() {
         </tr>
       `;
     }).join('');
-  } catch (err) {
-    els.studentsBody.innerHTML = `<tr><td colspan="5" class="form-error cell-center">${esc(err.message)}</td></tr>`;
+  } catch {
+    els.studentsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
   }
 }
 
 async function loadBookings() {
-  els.bookingsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">Loading bookings...</td></tr>';
+  if (!els.bookingsBody) return;
   try {
     const st = els.bookingStatus?.value || '';
     const qs = st ? `?status=${encodeURIComponent(st)}` : '';
@@ -142,7 +184,7 @@ async function loadBookings() {
     const rows = Array.isArray(res.data) ? res.data : [];
 
     if (!rows.length) {
-      els.bookingsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No facility bookings found.</td></tr>';
+      els.bookingsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
       return;
     }
 
@@ -167,19 +209,19 @@ async function loadBookings() {
         </tr>
       `;
     }).join('');
-  } catch (err) {
-    els.bookingsBody.innerHTML = `<tr><td colspan="5" class="form-error cell-center">${esc(err.message)}</td></tr>`;
+  } catch {
+    els.bookingsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
   }
 }
 
 async function loadClubRequests() {
-  els.clubRequestsBody.innerHTML = '<tr><td colspan="3" class="muted cell-center">Loading club requests...</td></tr>';
+  if (!els.clubRequestsBody) return;
   try {
     const res = await api('clubs.php?view=requests&status=pending');
     const rows = Array.isArray(res.data) ? res.data : [];
 
     if (!rows.length) {
-      els.clubRequestsBody.innerHTML = '<tr><td colspan="3" class="muted cell-center">No pending club requests.</td></tr>';
+      els.clubRequestsBody.innerHTML = '<tr><td colspan="3" class="muted cell-center">No records yet.</td></tr>';
       return;
     }
 
@@ -193,8 +235,8 @@ async function loadClubRequests() {
         </td>
       </tr>
     `).join('');
-  } catch (err) {
-    els.clubRequestsBody.innerHTML = `<tr><td colspan="3" class="muted cell-center">${esc(err.message)}</td></tr>`;
+  } catch {
+    els.clubRequestsBody.innerHTML = '<tr><td colspan="3" class="muted cell-center">No records yet.</td></tr>';
   }
 }
 
@@ -204,7 +246,7 @@ async function loadAnnouncements() {
     const res = await api('announcements.php?limit=10');
     const rows = Array.isArray(res.data) ? res.data : [];
     if (!rows.length) {
-      els.announcementsList.innerHTML = '<p class="muted">No announcements published yet.</p>';
+      els.announcementsList.innerHTML = '<p class="muted">No records yet.</p>';
       return;
     }
     els.announcementsList.innerHTML = rows.map((a) => `
@@ -214,18 +256,18 @@ async function loadAnnouncements() {
         <small class="muted">By ${esc(a.posted_by_name || 'Admin')} · ${esc(a.created_at || '')}</small>
       </div>
     `).join('');
-  } catch (err) {
-    els.announcementsList.innerHTML = `<p class="muted">${esc(err.message)}</p>`;
+  } catch {
+    els.announcementsList.innerHTML = '<p class="muted">No records yet.</p>';
   }
 }
 
 async function loadInventory() {
-  els.inventoryContainer.innerHTML = '<div class="feed-item"><p class="muted">Loading inventory...</p></div>';
+  if (!els.inventoryContainer) return;
   try {
     const res = await api('inventory.php');
     const items = Array.isArray(res.data) ? res.data : [];
     if (!items.length) {
-      els.inventoryContainer.innerHTML = '<div class="feed-item"><p class="muted">No inventory items yet. Add one above.</p></div>';
+      els.inventoryContainer.innerHTML = '<div class="feed-item"><p class="muted">No records yet.</p></div>';
       return;
     }
 
@@ -247,8 +289,8 @@ async function loadInventory() {
         </div>
       `;
     }).join('');
-  } catch (err) {
-    els.inventoryContainer.innerHTML = `<div class="feed-item"><p class="form-error">${esc(err.message)}</p></div>`;
+  } catch {
+    els.inventoryContainer.innerHTML = '<div class="feed-item"><p class="muted">No records yet.</p></div>';
   }
 }
 
@@ -260,6 +302,8 @@ function bindEvents() {
   els.logoutBtn?.addEventListener('click', async () => {
     try {
       await api('auth.php?action=logout', { method: 'POST' });
+    } catch {
+      // ignore sign-out errors and redirect
     } finally {
       window.location.replace('index.html');
     }
@@ -390,7 +434,7 @@ function bindEvents() {
   bindEvents();
   const user = await ensureAdminSession();
   if (!user) return;
-  await Promise.all([
+  await Promise.allSettled([
     loadStudents(),
     loadBookings(),
     loadClubRequests(),
