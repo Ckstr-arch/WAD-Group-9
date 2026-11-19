@@ -14,6 +14,9 @@ function env_val(string $key, string $default = ''): string
     if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
         return (string) $_ENV[$key];
     }
+    if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+        return (string) $_SERVER[$key];
+    }
     return $default;
 }
 
@@ -29,9 +32,12 @@ function db(): PDO
     $name = env_val('DB_NAME');
     $user = env_val('DB_USER');
     $pass = env_val('DB_PASS');
+    if ($pass === '') {
+        $pass = env_val('DB_PASSWORD');
+    }
 
     if ($host === '' || $name === '' || $user === '' || $pass === '') {
-        throw new RuntimeException('Database environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASS) are not fully configured.');
+        throw new RuntimeException('Database environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASS / DB_PASSWORD) are not fully configured.');
     }
 
     $options = [
