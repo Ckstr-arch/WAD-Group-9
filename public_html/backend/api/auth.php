@@ -15,6 +15,45 @@ if (!function_exists('request_method')) {
     }
 }
 
+if (!function_exists('read_json_body')) {
+    function read_json_body(): array
+    {
+        if (!empty($_POST)) {
+            return $_POST;
+        }
+        $raw = file_get_contents('php://input');
+        if ($raw === false || trim($raw) === '') {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+}
+
+if (!function_exists('clean_text')) {
+    function clean_text(mixed $value): string
+    {
+        return trim((string) ($value ?? ''));
+    }
+}
+
+if (!function_exists('json_response')) {
+    function json_response(array $data, int $status = 200): never
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data);
+        exit;
+    }
+}
+
+if (!function_exists('json_error')) {
+    function json_error(string $message, int $status = 400): never
+    {
+        json_response(['success' => false, 'error' => $message, 'message' => $message], $status);
+    }
+}
+
 if (!function_exists('current_user')) {
     function current_user(): ?array
     {
@@ -115,4 +154,9 @@ if ($method === 'POST') {
     ]);
 }
 
-method_not_allowed(['GET', 'POST', 'DELETE']);
+if (function_exists('method_not_allowed')) {
+    method_not_allowed(['GET', 'POST', 'DELETE']);
+}
+http_response_code(405);
+header('Content-Type: application/json; charset=utf-8');
+echo json_encode(['success' => false, 'error' => 'Method not allowed.']);
