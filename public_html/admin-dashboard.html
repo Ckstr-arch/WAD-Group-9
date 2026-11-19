@@ -1,1 +1,209 @@
-//World
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard · NSBM SportsHub</title>
+  <link rel="stylesheet" href="admin-dashboard.css?v=4">
+</head>
+<body data-require="admin">
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand" aria-label="NSBM SportsHub">
+        <svg class="brand-mark" viewBox="34 14 407 444" width="36" height="36" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="brand-blue" x1="40" y1="130" x2="360" y2="360" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#2463a1"></stop>
+              <stop offset="1" stop-color="#18558e"></stop>
+            </linearGradient>
+            <linearGradient id="brand-blue-top" x1="240" y1="20" x2="414" y2="133" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#205e9b"></stop>
+              <stop offset="1" stop-color="#245e96"></stop>
+            </linearGradient>
+            <linearGradient id="brand-green" x1="239" y1="180" x2="435" y2="280" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#39b143"></stop>
+              <stop offset="1" stop-color="#32a942"></stop>
+            </linearGradient>
+            <linearGradient id="brand-lime" x1="40" y1="200" x2="286" y2="380" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#8fc640"></stop>
+              <stop offset="1" stop-color="#88c440"></stop>
+            </linearGradient>
+          </defs>
+          <path fill="url(#brand-blue-top)" d="M240 18C294 20 351 30 396 50C405 77 411 106 414 133L239 145Z"></path>
+          <path fill="url(#brand-blue)" d="M40 130C111 133 161 101 201 105C217 118 231 134 239 145L239 345C228 335 217 329 205 332C172 267 111 219 41 189Z"></path>
+          <path fill="url(#brand-lime)" d="M40 46C103 51 165 74 201 105C161 102 143 131 40 131Z"></path>
+          <path fill="url(#brand-blue)" d="M286 331L379 355C350 396 295 429 236 454C259 418 277 376 286 331Z"></path>
+          <path fill="url(#brand-lime)" d="M205 332C217 329 229 335 239 345C253 333 269 329 286 332C278 380 257 428 236 454C231 410 221 367 205 332Z"></path>
+          <path fill="url(#brand-green)" d="M239 116C278 86 309 125 414 132L435 133L435 363C375 367 327 340 286 333C268 329 251 332 239 345Z"></path>
+          <path fill="url(#brand-lime)" d="M40 214C125 251 205 321 207 444C107 421 50 302 40 214Z"></path>
+        </svg>
+        <span>NSBM<span class="brand-sub">SPORTSHUB</span></span>
+      </div>
+
+      <nav class="nav-list" aria-label="Admin sections">
+        <button type="button" class="nav-item active" data-target="section-students">Registered Students</button>
+        <button type="button" class="nav-item" data-target="section-bookings">Facility Bookings</button>
+        <button type="button" class="nav-item" data-target="section-clubs">Club Requests &amp; Create</button>
+        <button type="button" class="nav-item" data-target="section-announcements">Post Announcements</button>
+        <button type="button" class="nav-item" data-target="section-inventory">Equipment Inventory</button>
+        <button type="button" id="logout-btn" class="nav-item nav-signout">Sign out</button>
+      </nav>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">ADMINISTRATOR CONTROL PANEL</span>
+          <h1 id="admin-welcome">Manage Campus Sports &amp; Facilities</h1>
+          <p class="muted" id="admin-meta">Connecting to workspace...</p>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <!-- 1. Registered students -->
+        <section id="section-students" class="admin-section active-section">
+          <div class="card">
+            <h2>Registered Students Directory</h2>
+            <p class="muted">Student accounts fetched directly from Aiven MySQL.</p>
+            <div class="admin-toolbar">
+              <input type="search" id="student-search" placeholder="Search name, email, or ID...">
+              <select id="student-status-filter">
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="refresh-students-btn">Refresh</button>
+            </div>
+            <div class="table-scroll card-body-gap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Student Name</th>
+                    <th>University Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="registered-students-body">
+                  <tr><td colspan="5" class="muted cell-center">Fetching students from database...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Facility bookings -->
+        <section id="section-bookings" class="admin-section" hidden>
+          <div class="card">
+            <h2>Approve Student Facility Bookings</h2>
+            <p class="muted">Review and confirm or cancel ground, court, and facility reservations.</p>
+            <div class="admin-toolbar">
+              <select id="booking-status-filter">
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="refresh-bookings-btn">Refresh</button>
+            </div>
+            <div class="table-scroll card-body-gap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Facility &amp; Sport</th>
+                    <th>Date &amp; Time</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bookings-approval-body">
+                  <tr><td colspan="5" class="muted cell-center">Fetching booking requests from database...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Club requests + create club -->
+        <section id="section-clubs" class="admin-section" hidden>
+          <div class="admin-two-col">
+            <div class="card">
+              <h2>Club Join Requests</h2>
+              <p class="muted">Pending membership applications from students.</p>
+              <div class="table-scroll card-body-gap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Club</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="club-requests-body">
+                    <tr><td colspan="3" class="muted cell-center">Fetching club requests...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Create New Club</h2>
+              <p class="muted">Insert a new club directly into Aiven MySQL.</p>
+              <form id="create-club-form" class="admin-form">
+                <input type="text" id="club-name" placeholder="Club Name (e.g., Archery Club)" required>
+                <input type="text" id="club-sport" placeholder="Sport (e.g., Archery)" required>
+                <input type="text" id="club-president" placeholder="President Name (e.g., Kavindi Perera)" required>
+                <textarea id="club-desc" placeholder="Club Description" rows="3" required></textarea>
+                <button type="submit" class="btn btn-primary">Save Club to Database</button>
+                <p class="form-status" id="create-club-status" role="status" aria-live="polite"></p>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Announcements -->
+        <section id="section-announcements" class="admin-section" hidden>
+          <div class="card card-narrow">
+            <h2>Post Campus Announcement</h2>
+            <p class="muted">Publish real-time updates to the announcements feed.</p>
+            <form id="announcement-form" class="admin-form">
+              <input type="text" id="announcement-title" placeholder="Announcement Title" required>
+              <textarea id="announcement-text" placeholder="Write details here..." rows="4" required></textarea>
+              <button type="submit" class="btn btn-primary">Publish to Feed</button>
+              <p class="form-status" id="announcement-status" role="status" aria-live="polite"></p>
+            </form>
+            <div id="announcements-list" class="card-body-gap" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+        </section>
+
+        <!-- 5. Inventory -->
+        <section id="section-inventory" class="admin-section" hidden>
+          <div class="card card-medium">
+            <h2>Equipment Inventory Management</h2>
+            <p class="muted">Add equipment or update stock levels in real time.</p>
+            <form id="add-inventory-form" class="admin-toolbar" style="margin-bottom:14px;">
+              <input type="text" id="inv-item-name" placeholder="Equipment Name (e.g., Basketballs)" required>
+              <input type="number" id="inv-total-stock" placeholder="Total Stock" min="0" required style="width:130px;">
+              <button type="submit" class="btn btn-primary">Add Item</button>
+            </form>
+            <p class="form-status" id="inventory-status" role="status" aria-live="polite"></p>
+            <div id="inventory-container" class="card-body-gap" style="display:flex;flex-direction:column;gap:10px;">
+              <div class="feed-item">
+                <p class="muted">Loading inventory counts from database...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="admin-dashboard.js?v=4"></script>
+</body>
+</html>

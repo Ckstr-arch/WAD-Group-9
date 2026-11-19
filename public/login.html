@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSBM SportsHub - Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- Background Darkening Overlay -->
+        <div class="bg-overlay"></div>
+
+        <!-- Main Content Grid -->
+        <div class="content-wrapper">
+            
+            <!-- LEFT SECTION: HERO & BRANDING -->
+            <div class="hero-section">
+                
+                <!-- Center Text -->
+                <div class="hero-content">
+                    <h1 class="hero-title">NSBM <span class="highlight">SportsHub</span></h1>
+                    <p class="hero-tagline">Connect &nbsp;&bull;&nbsp; Participate &nbsp;&bull;&nbsp; Grow</p>
+                    <p class="hero-description">
+                        Your all-in-one platform for sports clubs, training schedules, tournaments and more at NSBM.
+                    </p>
+
+                    <!-- Feature Icons Bar (Vector SVG Icons) -->
+                    <div class="features-bar">
+                        <div class="feature-item">
+                            <div class="icon-box">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            </div>
+                            <span>Clubs</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="icon-box">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            </div>
+                            <span>Schedules</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="icon-box">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M18 4H6v7a6 6 0 0 0 12 0V4z"></path></svg>
+                            </div>
+                            <span>Tournaments</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="icon-box">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            </div>
+                            <span>Results</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="icon-box">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M3 10h18"></path><path d="M5 6l7-3 7 3"></path><path d="M4 10v11"></path><path d="M20 10v11"></path><path d="M8 10v11"></path><path d="M12 10v11"></path><path d="M16 10v11"></path></svg>
+                            </div>
+                            <span>Facilities</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SECTION: LOGIN CARD -->
+            <div class="login-section">
+                <div class="login-card">
+                    <div class="card-logo"></div>
+
+                    <h2 class="card-title">Welcome Back</h2>
+                    <p class="card-subtext">Sign in to your NSBM account</p>
+
+                    <form class="login-form" action="#" method="POST">
+                        <!-- Email Input -->
+                        <div class="input-group">
+                            <label for="email">NSBM Mail</label>
+                            <div class="input-wrapper">
+                                <span class="input-symbol">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                </span>
+                                <input type="email" id="email" placeholder="yourname@nsbm.ac.lk" required>
+                            </div>
+                        </div>
+
+                        <!-- Password Input -->
+                        <div class="input-group">
+                            <label for="password">Password</label>
+                            <div class="input-wrapper">
+                                <span class="input-symbol">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <input type="password" id="password" placeholder="Enter your password" required>
+                                <span class="eye-symbol">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Remember Me & Forgot Password Row -->
+                        <div class="options-row">
+                            <label class="remember-me">
+                                <input type="checkbox" checked>
+                                Remember me
+                            </label>
+                            <a href="#" class="forgot-link">Forgot password?</a>
+                        </div>
+
+                        <!-- Login Submit Button -->
+                        <button type="submit" class="login-btn">
+                            <span>Login</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+
+                        <!-- Divider -->
+                        <div class="divider">
+                            <span>Or continue with</span>
+                        </div>
+
+                        <!-- Office 365 Button -->
+                        <button type="button" class="sso-btn">
+                            <div class="ms-grid">
+                                <span class="ms-sq red"></span>
+                                <span class="ms-sq green"></span>
+                                <span class="ms-sq blue"></span>
+                                <span class="ms-sq yellow"></span>
+                            </div>
+                            NSBM Office 365
+                        </button>
+                    </form>
+
+                    <!-- Card Footer -->
+                    <div class="card-footer">
+                        Not a member? <a href="#">Contact your campus IT support.</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
