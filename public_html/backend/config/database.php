@@ -180,6 +180,14 @@ if (!function_exists('require_login')) {
             session_start();
         }
         $userId = (int) ($_SESSION['user_id'] ?? 0);
+
+        if ($userId < 1) {
+            $headerId = to_id($_SERVER['HTTP_X_USER_ID'] ?? null);
+            if ($headerId !== null) {
+                $userId = $headerId;
+            }
+        }
+
         if ($userId < 1) {
             json_error('Authentication required.', 401);
         }

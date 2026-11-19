@@ -121,7 +121,8 @@ async function api(path, options = {}) {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error(`Invalid response (${res.status}) from ${base}/${path}`);
+    const snippet = text.trim().slice(0, 120) || 'empty body';
+    throw new Error(`HTTP ${res.status} from ${base}/${path}: ${snippet}`);
   }
 
   if (!res.ok || data.success === false) {
