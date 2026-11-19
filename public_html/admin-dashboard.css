@@ -162,6 +162,12 @@ body {
   gap: 20px;
 }
 
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .admin-section[hidden] {
   display: none;
 }
@@ -213,6 +219,17 @@ body {
   flex-direction: column;
   gap: 12px;
   margin-top: 14px;
+}
+
+.student-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.student-form-grid .btn {
+  grid-column: span 3;
+  justify-self: start;
 }
 
 .admin-toolbar input,
@@ -287,14 +304,10 @@ body {
 }
 
 .form-status {
-  margin: 0;
+  margin: 8px 0 0;
   font-size: 0.88rem;
   color: var(--admin-accent);
   min-height: 1.2em;
-}
-
-.form-error {
-  color: var(--admin-danger);
 }
 
 /* Tables & badges */
@@ -400,8 +413,13 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .admin-two-col {
+  .admin-two-col,
+  .student-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .student-form-grid .btn {
+    grid-column: span 1;
   }
 
   .topbar,

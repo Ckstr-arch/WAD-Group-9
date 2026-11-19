@@ -7,6 +7,15 @@ const els = {
   navButtons: Array.from(document.querySelectorAll('.nav-item[data-target]')),
   sections: Array.from(document.querySelectorAll('.admin-section')),
 
+  addStudentForm: document.getElementById('add-student-form'),
+  studentName: document.getElementById('student-name'),
+  studentNumber: document.getElementById('student-number'),
+  studentFaculty: document.getElementById('student-faculty'),
+  studentBatch: document.getElementById('student-batch'),
+  studentEmail: document.getElementById('student-email'),
+  studentPassword: document.getElementById('student-password'),
+  addStudentStatus: document.getElementById('add-student-status'),
+
   studentSearch: document.getElementById('student-search'),
   studentStatus: document.getElementById('student-status-filter'),
   refreshStudents: document.getElementById('refresh-students-btn'),
@@ -152,7 +161,7 @@ async function loadStudents() {
     const rows = Array.isArray(res.data) ? res.data : [];
 
     if (!rows.length) {
-      els.studentsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
+      els.studentsBody.innerHTML = '<tr><td colspan="7" class="muted cell-center">No records yet.</td></tr>';
       return;
     }
 
@@ -160,18 +169,27 @@ async function loadStudents() {
       const active = Number(u.is_active ?? (u.status === 'approved' ? 1 : 0)) === 1;
       const badgeClass = active ? 'badge-active' : 'badge-inactive';
       const statusLabel = active ? 'active' : (u.status || 'inactive');
+      const facBatch = [u.faculty, u.batch_number ? `Batch ${u.batch_number}` : '']
+        .filter(Boolean)
+        .join(' · ') || '—';
+
       return `
         <tr>
           <td>${esc(u.student_id || u.id)}</td>
           <td>${esc(u.name)}</td>
+          <td>${esc(facBatch)}</td>
           <td>${esc(u.email)}</td>
           <td>${esc(u.role)}</td>
           <td><span class="badge ${badgeClass}">${esc(statusLabel)}</span></td>
+          <td>
+            <button type="button" class="btn-sm btn-approve" data-reset-pw-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Set Password</button>
+            <button type="button" class="btn-sm btn-reject" data-delete-student-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Delete</button>
+          </td>
         </tr>
       `;
     }).join('');
   } catch {
-    els.studentsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
+    els.studentsBody.innerHTML = '<tr><td colspan="7" class="muted cell-center">No records yet.</td></tr>';
   }
 }
 
@@ -306,6 +324,74 @@ function bindEvents() {
       // ignore sign-out errors and redirect
     } finally {
       window.location.replace('index.html');
+    }
+  });
+
+  els.addStudentForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (els.addStudentStatus) els.addStudentStatus.textContent = 'Registering student...';
+    try {
+      await api('students.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: els.studentName?.value.trim() || '',
+          student_id: els.studentNumber?.value.trim() || '',
+          faculty: els.studentFaculty?.value.trim() || '',
+          batch_number: els.studentBatch?.value.trim() || '',
+          email: els.studentEmail?.value.trim() || '',
+          password: els.studentPassword?.value || '',
+          role: 'student',
+          is_active: 1,
+        }),
+      });
+      els.addStudentForm.reset();
+      if (els.addStudentStatus) {
+        els.addStudentStatus.textContent = 'Student registered. They can sign in now with their email and password.';
+      }
+      await loadStudents();
+    } catch (err) {
+      if (els.addStudentStatus) els.addStudentStatus.textContent = err.message;
+    }
+  });
+
+  els.studentsBody?.addEventListener('click', async (e) => {
+    const resetBtn = e.target.closest('button[data-reset-pw-id]');
+    if (resetBtn) {
+      const id = Number(resetBtn.dataset.resetPwId);
+      const label = resetBtn.dataset.studentName || 'this student';
+      const nextPassword = window.prompt(`Enter a new password (min 6 characters) for ${label}:`);
+      if (!nextPassword) return;
+      resetBtn.disabled = true;
+      try {
+        await api('students.php', {
+          method: 'PUT',
+          body: JSON.stringify({ id, password: nextPassword }),
+        });
+        if (els.addStudentStatus) els.addStudentStatus.textContent = `Password updated for ${label}.`;
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        resetBtn.disabled = false;
+      }
+      return;
+    }
+
+    const delBtn = e.target.closest('button[data-delete-student-id]');
+    if (!delBtn) return;
+    const id = Number(delBtn.dataset.deleteStudentId);
+    const label = delBtn.dataset.studentName || 'this student';
+    if (!window.confirm(`Delete ${label} permanently?`)) return;
+    delBtn.disabled = true;
+    try {
+      await api('students.php', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
+      if (els.addStudentStatus) els.addStudentStatus.textContent = `${label} removed.`;
+      await loadStudents();
+    } catch (err) {
+      alert(err.message);
+      delBtn.disabled = false;
     }
   });
 

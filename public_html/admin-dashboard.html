@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin Dashboard · NSBM SportsHub</title>
-  <link rel="stylesheet" href="admin-dashboard.css?v=4">
+  <link rel="stylesheet" href="admin-dashboard.css?v=5">
 </head>
 <body data-require="admin">
   <div class="app-shell">
@@ -65,10 +65,25 @@
         <!-- 1. Registered students -->
         <section id="section-students" class="admin-section active-section">
           <div class="card">
+            <h2>Register Student Account</h2>
+            <p class="muted">Create a student login account with initials, student number, faculty, batch, and password.</p>
+            <form id="add-student-form" class="admin-form student-form-grid" autocomplete="off">
+              <input type="text" id="student-name" placeholder="Name with Initials (e.g., K. A. Perera)" required>
+              <input type="text" id="student-number" placeholder="Student Number (e.g., 20261045)" maxlength="16" required>
+              <input type="text" id="student-faculty" placeholder="Faculty (e.g., Computing)" required>
+              <input type="text" id="student-batch" placeholder="Batch Number (e.g., 26.1)" required>
+              <input type="email" id="student-email" placeholder="University Email (e.g., student@nsbm.ac.lk)" required>
+              <input type="password" id="student-password" placeholder="Assign Password (min 6 chars)" minlength="6" required>
+              <button type="submit" class="btn btn-primary">Register Student</button>
+            </form>
+            <p class="form-status" id="add-student-status" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="card">
             <h2>Registered Students Directory</h2>
-            <p class="muted">Student accounts fetched directly from Aiven MySQL.</p>
+            <p class="muted">Manage registered accounts, update passwords, or remove students.</p>
             <div class="admin-toolbar">
-              <input type="search" id="student-search" placeholder="Search name, email, or ID...">
+              <input type="search" id="student-search" placeholder="Search name, email, ID, faculty, or batch...">
               <select id="student-status-filter">
                 <option value="">All statuses</option>
                 <option value="active">Active</option>
@@ -81,14 +96,16 @@
                 <thead>
                   <tr>
                     <th>Student ID</th>
-                    <th>Student Name</th>
+                    <th>Name (Initials)</th>
+                    <th>Faculty &amp; Batch</th>
                     <th>University Email</th>
                     <th>Role</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="registered-students-body">
-                  <tr><td colspan="5" class="muted cell-center">Fetching students from database...</td></tr>
+                  <tr><td colspan="7" class="muted cell-center">No records yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -122,7 +139,7 @@
                   </tr>
                 </thead>
                 <tbody id="bookings-approval-body">
-                  <tr><td colspan="5" class="muted cell-center">Fetching booking requests from database...</td></tr>
+                  <tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -145,7 +162,7 @@
                     </tr>
                   </thead>
                   <tbody id="club-requests-body">
-                    <tr><td colspan="3" class="muted cell-center">Fetching club requests...</td></tr>
+                    <tr><td colspan="3" class="muted cell-center">No records yet.</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -194,7 +211,7 @@
             <p class="form-status" id="inventory-status" role="status" aria-live="polite"></p>
             <div id="inventory-container" class="card-body-gap" style="display:flex;flex-direction:column;gap:10px;">
               <div class="feed-item">
-                <p class="muted">Loading inventory counts from database...</p>
+                <p class="muted">No records yet.</p>
               </div>
             </div>
           </div>
@@ -204,6 +221,6 @@
     </main>
   </div>
 
-  <script type="module" src="admin-dashboard.js?v=4"></script>
+  <script type="module" src="admin-dashboard.js?v=5"></script>
 </body>
 </html>
