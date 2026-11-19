@@ -45,6 +45,51 @@ function ensure_student_profile_columns(PDO $pdo): void
     $checked = true;
 }
 
+function table_has_column(PDO $pdo, string $table, string $column): bool
+{
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+        return false;
+    }
+    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '` LIKE ?');
+    $stmt->execute([$column]);
+    return (bool) $stmt->fetch();
+}
+
+function delete_user_and_dependencies(PDO $pdo, int $userId): bool
+{
+    $pdo->beginTransaction();
+    try {
+        $childTargets = [
+            ['club_memberships', 'student_id'],
+            ['club_memberships', 'user_id'],
+            ['bookings', 'student_id'],
+            ['bookings', 'user_id'],
+            ['bookings', 'booked_by'],
+            ['announcements', 'posted_by'],
+            ['announcements', 'user_id'],
+        ];
+
+        foreach ($childTargets as [$table, $col]) {
+            if (table_has_column($pdo, $table, $col)) {
+                $stmt = $pdo->prepare('DELETE FROM `' . $table . '` WHERE `' . $col . '` = ?');
+                $stmt->execute([$userId]);
+            }
+        }
+
+        $del = $pdo->prepare('DELETE FROM users WHERE id = ?');
+        $del->execute([$userId]);
+        $deleted = $del->rowCount() > 0;
+
+        $pdo->commit();
+        return $deleted;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
 try {
     $pdo = db();
     ensure_student_profile_columns($pdo);
@@ -238,16 +283,15 @@ try {
         }
 
         try {
-            $del = $pdo->prepare('DELETE FROM users WHERE id = ?');
-            $del->execute([$id]);
+            $deleted = delete_user_and_dependencies($pdo, $id);
         } catch (PDOException $e) {
             if ($e->getCode() === '23000') {
-                json_error('Cannot delete account while it has linked bookings, club memberships, or announcements.', 409);
+                json_error('Cannot delete account while another table still references this user.', 409);
             }
             throw $e;
         }
 
-        if ($del->rowCount() < 1) {
+        if (!$deleted) {
             json_error('Student record not found.', 404);
         }
 
