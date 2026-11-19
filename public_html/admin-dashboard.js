@@ -1,4 +1,5 @@
 const ADMIN_ROLES = new Set(['admin', 'sports_admin', 'super_admin']);
+const SESSION_STORAGE_KEY = 'sportshub_user';
 
 const els = {
   welcome: document.getElementById('admin-welcome'),
@@ -49,6 +50,17 @@ const els = {
 let resolvedApiBase = null;
 let currentAdminUser = null;
 
+function readStoredUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function esc(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
@@ -90,9 +102,15 @@ async function resolveApiBase() {
 
 async function api(path, options = {}) {
   const base = await resolveApiBase();
+  const activeUser = currentAdminUser || readStoredUser();
+  const authHeaders = {};
+  if (activeUser?.id) authHeaders['X-User-Id'] = String(activeUser.id);
+  if (activeUser?.role) authHeaders['X-User-Role'] = String(activeUser.role);
+
   const res = await fetchWithTimeout(`${base}/${path}`, {
     ...options,
     headers: {
+      ...authHeaders,
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     },
@@ -126,7 +144,7 @@ function setActiveTab(targetId) {
 async function ensureAdminSession() {
   try {
     const session = await api('auth.php', { method: 'GET' });
-    const user = session.user || null;
+    const user = (session.authenticated && session.user) ? session.user : readStoredUser();
     currentAdminUser = user;
 
     if (!user || !user.id) {
@@ -150,6 +168,17 @@ async function ensureAdminSession() {
     }
     return user;
   } catch (err) {
+    const fallbackUser = readStoredUser();
+    if (fallbackUser && fallbackUser.id) {
+      currentAdminUser = fallbackUser;
+      if (els.welcome && fallbackUser.name) {
+        els.welcome.textContent = `Welcome, ${fallbackUser.name}`;
+      }
+      if (els.meta) {
+        els.meta.textContent = `${fallbackUser.email || 'Admin'} · Role: ${fallbackUser.role || 'admin'}`;
+      }
+      return fallbackUser;
+    }
     if (els.meta) {
       els.meta.textContent = `Session check: ${err.message}`;
     }
@@ -339,6 +368,7 @@ function bindEvents() {
     } catch {
       // ignore sign-out errors and redirect
     } finally {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
       window.location.replace('index.html');
     }
   });
