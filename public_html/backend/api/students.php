@@ -62,11 +62,15 @@ function delete_user_and_dependencies(PDO $pdo, int $userId): bool
         $childTargets = [
             ['club_memberships', 'student_id'],
             ['club_memberships', 'user_id'],
+            ['club_requests', 'student_id'],
+            ['club_requests', 'user_id'],
             ['bookings', 'student_id'],
             ['bookings', 'user_id'],
             ['bookings', 'booked_by'],
             ['announcements', 'posted_by'],
             ['announcements', 'user_id'],
+            ['clubs', 'created_by'],
+            ['clubs', 'user_id'],
         ];
 
         foreach ($childTargets as [$table, $col]) {
@@ -282,15 +286,7 @@ try {
             json_error('Admin accounts cannot be deleted.', 403);
         }
 
-        try {
-            $deleted = delete_user_and_dependencies($pdo, $id);
-        } catch (PDOException $e) {
-            if ($e->getCode() === '23000') {
-                json_error('Cannot delete account while another table still references this user.', 409);
-            }
-            throw $e;
-        }
-
+        $deleted = delete_user_and_dependencies($pdo, $id);
         if (!$deleted) {
             json_error('Student record not found.', 404);
         }
@@ -301,5 +297,9 @@ try {
     method_not_allowed(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 } catch (Throwable $e) {
     error_log('students.php error: ' . $e->getMessage());
-    json_error('Unable to process student request.', 500);
+    json_response([
+        'success' => false,
+        'error'   => 'Unable to process student request: ' . $e->getMessage(),
+        'message' => 'Unable to process student request: ' . $e->getMessage(),
+    ], 500);
 }
