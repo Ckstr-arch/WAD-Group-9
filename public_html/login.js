@@ -14,7 +14,12 @@ function setError(message = '') {
 
 function getRedirectUrl(role = '') {
   const normalizedRole = String(role).trim().toLowerCase();
-  if (normalizedRole === 'admin') {
+  if (
+    normalizedRole === 'sports_admin' ||
+    normalizedRole === 'super_admin' ||
+    normalizedRole === 'club_manager' ||
+    normalizedRole === 'admin'
+  ) {
     return 'admin-dashboard.html';
   }
   return 'student-dashboard.html';

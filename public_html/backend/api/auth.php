@@ -24,7 +24,7 @@ if (!function_exists('current_user')) {
         }
 
         $stmt = db()->prepare(
-            'SELECT id, name, email, role, status FROM users WHERE id = ? LIMIT 1'
+            'SELECT id, student_id, name, email, role, avatar_initials, is_active FROM users WHERE id = ? AND is_active = 1 LIMIT 1'
         );
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
@@ -77,7 +77,7 @@ if ($method === 'POST') {
     }
 
     $stmt = db()->prepare(
-        'SELECT id, name, email, password_hash, role, status FROM users WHERE email = ? LIMIT 1'
+        'SELECT id, student_id, name, email, password_hash, role, avatar_initials, is_active FROM users WHERE email = ? LIMIT 1'
     );
     $stmt->execute([$email]);
     $row = $stmt->fetch();
@@ -89,11 +89,11 @@ if ($method === 'POST') {
     if (!$valid) {
         json_error('Invalid email or password.', 401);
     }
-    if ($row['status'] !== 'approved') {
+    if ((int) $row['is_active'] !== 1) {
         json_error('This account is not active. Please contact an administrator.', 403);
     }
 
-    session_regenerate_id(true);               // prevent session fixation
+    session_regenerate_id(true);
     $_SESSION['user_id'] = (int) $row['id'];
 
     if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
@@ -104,11 +104,13 @@ if ($method === 'POST') {
     json_response([
         'success' => true,
         'user'    => [
-            'id'     => (int) $row['id'],
-            'name'   => $row['name'],
-            'email'  => $row['email'],
-            'role'   => $row['role'],
-            'status' => $row['status'],
+            'id'              => (int) $row['id'],
+            'student_id'      => $row['student_id'],
+            'name'            => $row['name'],
+            'email'           => $row['email'],
+            'role'            => $row['role'],
+            'avatar_initials' => $row['avatar_initials'],
+            'is_active'       => (int) $row['is_active'],
         ],
     ]);
 }
