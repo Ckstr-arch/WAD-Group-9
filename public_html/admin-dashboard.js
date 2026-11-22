@@ -540,6 +540,30 @@ function bindEvents() {
       els.inventoryStatus.textContent = err.message;
     }
   });
+const delBtn = e.target.closest('button[data-delete-student-id]');
+    if (!delBtn) return;
+    const id = Number(delBtn.dataset.deleteStudentId);
+    const label = delBtn.dataset.studentName || 'this student';
+    if (!window.confirm(`Delete ${label} permanently?`)) return;
+    delBtn.disabled = true;
+    try {
+      await api('students.php', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
+      if (els.addStudentStatus) els.addStudentStatus.textContent = `${label} removed.`;
+      await loadStudents();
+    } catch (err) {
+      await loadStudents();
+      if (err?.name === 'AbortError' || String(err?.message || '').toLowerCase().includes('abort')) {
+        if (els.addStudentStatus) {
+          els.addStudentStatus.textContent = `${label} request finished (table refreshed).`;
+        }
+      } else {
+        alert(err.message);
+      }
+      delBtn.disabled = false;
+    }
 
   els.inventoryContainer?.addEventListener('click', async (e) => {
     const btn = e.target.closest('.inv-save');
