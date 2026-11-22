@@ -6,12 +6,16 @@
 (function () {
     'use strict';
 
+    const SESSION_STORAGE_KEY = 'sportshub_user';
+    const ADMIN_ROLES = new Set(['admin', 'sports_admin', 'super_admin']);
+
     /* --------------------------------------------------------
      * 1. STATE & CONFIG
      * ------------------------------------------------------ */
     const state = {
         currentAdminUser: null,
         currentSection: 'dashboard',
+        resolvedApiBase: null,
         students: [],
         studentsLoaded: false,
         clubs: [],
@@ -24,14 +28,14 @@
         }
     };
 
-    const API = {
-        auth: 'api/auth.php',
-        dashboard: 'api/dashboard.php',
-        students: 'api/students.php',
-        clubs: 'api/clubs.php',
-        bookings: 'api/bookings.php',
-        announcements: 'api/announcements.php',
-        profile: 'api/profile.php'
+    const ENDPOINTS = {
+        auth: 'auth.php',
+        dashboard: 'dashboard.php',
+        students: 'students.php',
+        clubs: 'clubs.php',
+        bookings: 'bookings.php',
+        announcements: 'announcements.php',
+        profile: 'profile.php'
     };
 
     /* --------------------------------------------------------
@@ -92,34 +96,104 @@
         return '<span class="badge badge-inactive">Inactive</span>';
     }
 
+    function readStoredUser() {
+        try {
+            const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function writeStoredUser(user) {
+        try {
+            if (user && typeof user === 'object') {
+                sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+            }
+        } catch (_) { /* ignore storage errors */ }
+    }
+
     /* --------------------------------------------------------
-     * 3. NETWORKING (45s default timeout)
+     * 3. NETWORKING (45s default timeout + API base & header fallback)
      * ------------------------------------------------------ */
     async function fetchWithTimeout(url, options = {}, timeout = 45000) {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeout);
+        const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
 
         try {
             const response = await fetch(url, {
                 ...options,
                 signal: controller.signal,
-                credentials: 'same-origin'
+                credentials: 'include'
             });
-            clearTimeout(timer);
             return response;
         } catch (error) {
-            clearTimeout(timer);
             if (error.name === 'AbortError') {
                 const err = new Error('Request timed out');
                 err.isTimeout = true;
                 throw err;
             }
             throw error;
+        } finally {
+            if (timer) clearTimeout(timer);
         }
     }
 
-    async function apiRequest(url, options = {}) {
-        const res = await fetchWithTimeout(url, options);
+    async function resolveApiBase() {
+        if (state.resolvedApiBase) return state.resolvedApiBase;
+        for (const candidate of ['backend/api', 'api']) {
+            try {
+                const res = await fetchWithTimeout(`${candidate}/${ENDPOINTS.auth}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                }, 15000);
+                const text = await res.text();
+                JSON.parse(text);
+                state.resolvedApiBase = candidate;
+                return state.resolvedApiBase;
+            } catch (_) {
+                // try next candidate
+            }
+        }
+        state.resolvedApiBase = 'backend/api';
+        return state.resolvedApiBase;
+    }
+
+    function buildEndpointUrl(endpointOrRelative) {
+        if (/^https?:\/\//i.test(endpointOrRelative)) {
+            return endpointOrRelative;
+        }
+        const base = state.resolvedApiBase || 'backend/api';
+        const clean = endpointOrRelative.replace(/^\/+/, '');
+        if (clean.startsWith('backend/api/') || clean.startsWith('api/')) {
+            return clean;
+        }
+        return `${base}/${clean}`;
+    }
+
+    async function apiRequest(endpointOrRelative, options = {}) {
+        await resolveApiBase();
+        const url = buildEndpointUrl(endpointOrRelative);
+        const activeUser = state.currentAdminUser || readStoredUser();
+        const authHeaders = {};
+        if (activeUser && activeUser.id) {
+            authHeaders['X-User-Id'] = String(activeUser.id);
+        }
+        if (activeUser && activeUser.role) {
+            authHeaders['X-User-Role'] = String(activeUser.role);
+        }
+
+        const res = await fetchWithTimeout(url, {
+            ...options,
+            headers: {
+                'Accept': 'application/json',
+                ...authHeaders,
+                ...(options.headers || {})
+            }
+        });
+
         let data = null;
         const text = await res.text();
         if (text) {
@@ -132,15 +206,16 @@
         return { ok: res.ok, status: res.status, data };
     }
 
-    async function apiJson(url, method = 'GET', body = null) {
+    async function apiJson(endpointOrRelative, method = 'GET', body = null) {
         const opts = {
             method,
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+            headers: {}
         };
         if (body !== null && body !== undefined) {
+            opts.headers['Content-Type'] = 'application/json';
             opts.body = JSON.stringify(body);
         }
-        return apiRequest(url, opts);
+        return apiRequest(endpointOrRelative, opts);
     }
 
     /* --------------------------------------------------------
@@ -209,17 +284,51 @@
     /* --------------------------------------------------------
      * 6. SESSION / AUTH
      * ------------------------------------------------------ */
+    function extractSessionUser(data) {
+        if (!data || typeof data !== 'object') return null;
+        if (data.user && typeof data.user === 'object') return data.user;
+        if (data.data && typeof data.data === 'object') {
+            if (data.data.user && typeof data.data.user === 'object') return data.data.user;
+            if (data.data.id) return data.data;
+        }
+        return null;
+    }
+
     async function loadCurrentUser() {
+        const storedUser = readStoredUser();
+        if (storedUser && storedUser.id) {
+            state.currentAdminUser = storedUser;
+        }
+
         try {
-            const { ok, data } = await apiJson(API.auth, 'GET');
-            if (ok && data && data.success && data.data) {
-                state.currentAdminUser = data.data;
-                renderUserBadge();
-                return true;
+            const { ok, status, data } = await apiJson(ENDPOINTS.auth, 'GET');
+            const serverUser = extractSessionUser(data);
+
+            if (ok && data && data.success !== false && serverUser && serverUser.id) {
+                state.currentAdminUser = serverUser;
+                writeStoredUser(serverUser);
+            } else if (status === 401 || (data && data.authenticated === false && !storedUser?.id)) {
+                window.location.href = 'login.html';
+                return false;
+            } else if (!state.currentAdminUser || !state.currentAdminUser.id) {
+                window.location.href = 'login.html';
+                return false;
             }
-        } catch (_) { /* swallow */ }
-        window.location.href = 'login.html';
-        return false;
+        } catch (_) {
+            if (!state.currentAdminUser || !state.currentAdminUser.id) {
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+
+        const role = String(state.currentAdminUser.role || '').toLowerCase();
+        if (role && !ADMIN_ROLES.has(role)) {
+            window.location.href = 'student-dashboard.html';
+            return false;
+        }
+
+        renderUserBadge();
+        return true;
     }
 
     function renderUserBadge() {
@@ -240,7 +349,10 @@
 
     async function logout() {
         try {
-            await apiJson(API.auth, 'POST', { action: 'logout' });
+            await apiJson(`${ENDPOINTS.auth}?action=logout`, 'POST', { action: 'logout' });
+        } catch (_) { /* ignore */ }
+        try {
+            sessionStorage.removeItem(SESSION_STORAGE_KEY);
         } catch (_) { /* ignore */ }
         window.location.href = 'login.html';
     }
@@ -304,7 +416,7 @@
         if (!grid) return;
         grid.innerHTML = '<p class="muted">Loading overview…</p>';
         try {
-            const { ok, data } = await apiJson(API.dashboard, 'GET');
+            const { ok, data } = await apiJson(ENDPOINTS.dashboard, 'GET');
             if (!ok || !data || !data.success) {
                 grid.innerHTML = '<p class="muted">Unable to load dashboard stats.</p>';
                 return;
@@ -349,7 +461,7 @@
         const params = new URLSearchParams();
         if (search) params.set('search', search);
         if (status) params.set('status', status);
-        const url = API.students + (params.toString() ? '?' + params.toString() : '');
+        const url = ENDPOINTS.students + (params.toString() ? '?' + params.toString() : '');
 
         try {
             const { ok, data } = await apiJson(url, 'GET');
@@ -369,7 +481,7 @@
         const studentId = (row.student_id || '').toString().toUpperCase();
         const email = (row.email || '').toString().toLowerCase();
         const isPrimaryAdmin = studentId === 'ADMIN001' || email === 'admin@nsbmsport.ac.lk';
-        const isSelf = state.currentAdminUser && row.id === state.currentAdminUser.id;
+        const isSelf = state.currentAdminUser && Number(row.id) === Number(state.currentAdminUser.id);
         return isPrimaryAdmin || isSelf;
     }
 
@@ -490,7 +602,7 @@
         if (status) status.textContent = 'Saving…';
 
         try {
-            const { ok, data } = await apiJson(API.students, method, payload);
+            const { ok, data } = await apiJson(ENDPOINTS.students, method, payload);
             if (ok && data && data.success) {
                 showToast(payload.id ? 'Student updated.' : 'Student registered.', 'success');
                 closeModal('student-modal');
@@ -538,7 +650,6 @@
             return;
         }
 
-        // Optimistic: disable the button
         const btn = document.querySelector(`[data-action="delete"][data-id="${id}"]`);
         if (btn) {
             btn.disabled = true;
@@ -546,16 +657,14 @@
         }
 
         try {
-            const { ok, data } = await apiJson(API.students, 'DELETE', { id });
+            const { ok, data } = await apiJson(ENDPOINTS.students, 'DELETE', { id });
 
-            // If the server returned success, we're done.
             if (ok && data && data.success) {
                 showToast('User and related records deleted successfully.', 'success');
                 await loadStudents();
                 return;
             }
 
-            // If we got a clear server error (e.g. "Primary admin cannot be deleted"), show it.
             if (data && (data.message || data.error)) {
                 showToast(data.message || data.error || 'Failed to delete user.', 'error');
                 if (btn) {
@@ -565,12 +674,9 @@
                 return;
             }
 
-            // If we got here, the response was ambiguous (e.g. timeout after server succeeded).
-            // Refresh the list to see the real state instead of popping a false alert.
             showToast('Checking deletion status…', 'info', 2000);
             await loadStudents();
 
-            // If the row is still present, the delete genuinely failed.
             const stillPresent = state.students.some((s) => s.id === id);
             if (stillPresent) {
                 showToast('Deletion could not be confirmed. Please try again.', 'error');
@@ -578,7 +684,6 @@
                 showToast('User deleted successfully.', 'success');
             }
         } catch (err) {
-            // Network error / timeout — refresh to check real state, avoid false abort alert.
             console.error('Delete error:', err);
             try {
                 await loadStudents();
@@ -622,7 +727,7 @@
         if (!tbody) return;
         tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Loading clubs…</td></tr>';
         try {
-            const { ok, data } = await apiJson(API.clubs, 'GET');
+            const { ok, data } = await apiJson(ENDPOINTS.clubs, 'GET');
             if (!ok || !data || !data.success) {
                 tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Unable to load clubs.</td></tr>';
                 return;
@@ -630,243 +735,4 @@
             state.clubs = data.data || [];
             renderClubsTable();
         } catch (_) {
-            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
-        }
-    }
-
-    function renderClubsTable() {
-        const tbody = document.getElementById('clubs-tbody');
-        if (!tbody) return;
-        if (!state.clubs.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">No clubs found.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = state.clubs.map((c) => {
-            let statusBadge = '';
-            if (c.status === 'approved') statusBadge = '<span class="badge badge-approved">Approved</span>';
-            else if (c.status === 'pending') statusBadge = '<span class="badge badge-pending">Pending</span>';
-            else statusBadge = '<span class="badge badge-rejected">Rejected</span>';
-
-            const actions = c.status === 'pending'
-                ? `<button class="btn btn-sm btn-approve" data-action="approve-club" data-id="${c.id}">Approve</button>
-                   <button class="btn btn-sm btn-reject" data-action="reject-club" data-id="${c.id}" style="margin-left:6px;">Reject</button>`
-                : '—';
-
-            return `
-                <tr>
-                    <td style="font-weight:600;">${escapeHtml(c.name || '')}</td>
-                    <td>${escapeHtml(c.category || '—')}</td>
-                    <td>${escapeHtml(c.manager_name || '—')}</td>
-                    <td>${escapeHtml(formatDate(c.created_at))}</td>
-                    <td>${statusBadge}</td>
-                    <td>${actions}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function handleClubAction(id, action) {
-        try {
-            const { ok, data } = await apiJson(API.clubs, 'PUT', { id, status: action === 'approve-club' ? 'approved' : 'rejected' });
-            if (ok && data && data.success) {
-                showToast('Club ' + (action === 'approve-club' ? 'approved' : 'rejected') + '.', 'success');
-                await loadClubs();
-            } else {
-                showToast((data && data.message) || 'Unable to update club.', 'error');
-            }
-        } catch (_) {
-            showToast('Network error.', 'error');
-        }
-    }
-
-    function bindClubsTableEvents() {
-        const tbody = document.getElementById('clubs-tbody');
-        if (!tbody) return;
-        tbody.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button[data-action]');
-            if (!btn) return;
-            const id = Number(btn.dataset.id);
-            if (!id) return;
-            await handleClubAction(id, btn.dataset.action);
-        });
-    }
-
-    /* --------------------------------------------------------
-     * 11. BOOKINGS MODULE
-     * ------------------------------------------------------ */
-    async function loadBookings() {
-        const tbody = document.getElementById('bookings-tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Loading bookings…</td></tr>';
-        try {
-            const { ok, data } = await apiJson(API.bookings, 'GET');
-            if (!ok || !data || !data.success) {
-                tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Unable to load bookings.</td></tr>';
-                return;
-            }
-            state.bookings = data.data || [];
-            renderBookingsTable();
-        } catch (_) {
-            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
-        }
-    }
-
-    function renderBookingsTable() {
-        const tbody = document.getElementById('bookings-tbody');
-        if (!tbody) return;
-        if (!state.bookings.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">No bookings found.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = state.bookings.map((b) => {
-            let badge = '';
-            if (b.status === 'confirmed') badge = '<span class="badge badge-confirmed">Confirmed</span>';
-            else if (b.status === 'pending') badge = '<span class="badge badge-pending">Pending</span>';
-            else if (b.status === 'cancelled') badge = '<span class="badge badge-cancelled">Cancelled</span>';
-            else badge = '<span class="badge">' + escapeHtml(b.status || '—') + '</span>';
-
-            return `
-                <tr>
-                    <td>${escapeHtml(b.facility || '—')}</td>
-                    <td>${escapeHtml(b.booked_by_name || '—')}</td>
-                    <td>${escapeHtml(formatDateTime(b.start_time))}</td>
-                    <td>${escapeHtml(formatDateTime(b.end_time))}</td>
-                    <td>${escapeHtml(b.purpose || '—')}</td>
-                    <td>${badge}</td>
-                    <td>${escapeHtml(formatDate(b.created_at))}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    /* --------------------------------------------------------
-     * 12. ANNOUNCEMENTS MODULE
-     * ------------------------------------------------------ */
-    async function loadAnnouncements() {
-        const list = document.getElementById('announcements-list');
-        if (!list) return;
-        list.innerHTML = '<p class="muted">Loading announcements…</p>';
-        try {
-            const { ok, data } = await apiJson(API.announcements, 'GET');
-            if (!ok || !data || !data.success) {
-                list.innerHTML = '<p class="muted">Unable to load announcements.</p>';
-                return;
-            }
-            state.announcements = data.data || [];
-            renderAnnouncements();
-        } catch (_) {
-            list.innerHTML = '<p class="muted">Network error.</p>';
-        }
-    }
-
-    function renderAnnouncements() {
-        const list = document.getElementById('announcements-list');
-        if (!list) return;
-        if (!state.announcements.length) {
-            list.innerHTML = '<p class="muted">No announcements yet.</p>';
-            return;
-        }
-        list.innerHTML = state.announcements.map((a) => `
-            <div class="feed-item">
-                <div style="display:flex;justify-content:space-between;gap:12px;">
-                    <strong>${escapeHtml(a.title || '')}</strong>
-                    <span class="muted" style="font-size:0.8rem;">${escapeHtml(formatDateTime(a.created_at))}</span>
-                </div>
-                <p>${escapeHtml(a.body || '')}</p>
-                <div class="muted" style="font-size:0.8rem;">By ${escapeHtml(a.author_name || 'Admin')}</div>
-            </div>
-        `).join('');
-    }
-
-    /* --------------------------------------------------------
-     * 13. PROFILE MODULE
-     * ------------------------------------------------------ */
-    async function loadProfile() {
-        const form = document.getElementById('profile-form');
-        if (!form || !state.currentAdminUser) return;
-        const setVal = (name, val) => {
-            const el = form.querySelector(`[name="${name}"]`);
-            if (el) el.value = val ?? '';
-        };
-        setVal('name', state.currentAdminUser.name);
-        setVal('email', state.currentAdminUser.email);
-    }
-
-    function bindProfileForm() {
-        const form = document.getElementById('profile-form');
-        if (!form) return;
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const status = document.getElementById('profile-form-status');
-            if (status) status.textContent = '';
-            const formData = new FormData(form);
-            const payload = {
-                name: (formData.get('name') || '').toString().trim(),
-                password: (formData.get('password') || '').toString()
-            };
-            try {
-                const { ok, data } = await apiJson(API.profile, 'PUT', payload);
-                if (ok && data && data.success) {
-                    showToast('Profile updated.', 'success');
-                    await loadCurrentUser();
-                } else {
-                    showToast((data && data.message) || 'Unable to update profile.', 'error');
-                }
-            } catch (_) {
-                showToast('Network error.', 'error');
-            }
-        });
-    }
-
-    /* --------------------------------------------------------
-     * 14. MODAL CLOSE HANDLERS
-     * ------------------------------------------------------ */
-    function bindModalCloseHandlers() {
-        document.querySelectorAll('[data-close-modal]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const target = btn.dataset.closeModal;
-                if (target) closeModal(target);
-            });
-        });
-        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
-            backdrop.addEventListener('click', (e) => {
-                if (e.target === backdrop) {
-                    const modal = backdrop.closest('[id]');
-                    if (modal) closeModal(modal.id);
-                }
-            });
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('[id$="-modal"]').forEach((m) => {
-                    if (m.style.display === 'flex') closeModal(m.id);
-                });
-            }
-        });
-    }
-
-    /* --------------------------------------------------------
-     * 15. INITIALIZATION
-     * ------------------------------------------------------ */
-    async function init() {
-        bindNavigation();
-        bindStudentsToolbar();
-        bindStudentsTableEvents();
-        bindClubsTableEvents();
-        bindProfileForm();
-        bindModalCloseHandlers();
-
-        const authenticated = await loadCurrentUser();
-        if (!authenticated) return;
-
-        // Default section
-        const initialSection = state.currentSection || 'dashboard';
-        switchSection(initialSection);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-})();
+            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">

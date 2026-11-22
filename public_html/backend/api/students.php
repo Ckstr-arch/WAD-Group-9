@@ -64,6 +64,17 @@ function table_has_column(PDO $pdo, string $table, string $column): bool
 
 function delete_user_and_dependencies(PDO $pdo, int $userId): bool
 {
+    // Attempt direct delete first when no child rows block deletion
+    try {
+        $del = $pdo->prepare('DELETE FROM users WHERE id = ?');
+        $del->execute([$userId]);
+        return $del->rowCount() > 0;
+    } catch (PDOException $e) {
+        if ($e->getCode() !== '23000') {
+            throw $e;
+        }
+    }
+
     $pdo->beginTransaction();
     try {
         $childTargets = [
@@ -283,14 +294,17 @@ try {
             json_error('You cannot delete your own active account.', 400);
         }
 
-        $targetStmt = $pdo->prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1');
+        $targetStmt = $pdo->prepare('SELECT id, student_id, email, role FROM users WHERE id = ? LIMIT 1');
         $targetStmt->execute([$id]);
         $target = $targetStmt->fetch();
         if (!$target) {
             json_error('Student record not found.', 404);
         }
-        if (is_admin_role((string) ($target['role'] ?? ''))) {
-            json_error('Admin accounts cannot be deleted.', 403);
+
+        $targetStudentId = strtoupper((string) ($target['student_id'] ?? ''));
+        $targetEmail = strtolower((string) ($target['email'] ?? ''));
+        if ($targetStudentId === 'ADMIN001' || $targetEmail === 'admin@nsbmsport.ac.lk') {
+            json_error('Primary admin account cannot be deleted.', 403);
         }
 
         $deleted = delete_user_and_dependencies($pdo, $id);
