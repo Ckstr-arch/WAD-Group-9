@@ -9,9 +9,6 @@
     const SESSION_STORAGE_KEY = 'sportshub_user';
     const ADMIN_ROLES = new Set(['admin', 'sports_admin', 'super_admin']);
 
-    /* --------------------------------------------------------
-     * 1. STATE & CONFIG
-     * ------------------------------------------------------ */
     const state = {
         currentAdminUser: null,
         currentSection: 'dashboard',
@@ -38,9 +35,6 @@
         profile: 'profile.php'
     };
 
-    /* --------------------------------------------------------
-     * 2. UTILITIES
-     * ------------------------------------------------------ */
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)
@@ -112,23 +106,19 @@
             if (user && typeof user === 'object') {
                 sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
             }
-        } catch (_) { /* ignore storage errors */ }
+        } catch (_) { /* ignore */ }
     }
 
-    /* --------------------------------------------------------
-     * 3. NETWORKING (45s default timeout + API base & header fallback)
-     * ------------------------------------------------------ */
     async function fetchWithTimeout(url, options = {}, timeout = 45000) {
         const controller = new AbortController();
         const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
 
         try {
-            const response = await fetch(url, {
+            return await fetch(url, {
                 ...options,
                 signal: controller.signal,
                 credentials: 'include'
             });
-            return response;
         } catch (error) {
             if (error.name === 'AbortError') {
                 const err = new Error('Request timed out');
@@ -207,10 +197,7 @@
     }
 
     async function apiJson(endpointOrRelative, method = 'GET', body = null) {
-        const opts = {
-            method,
-            headers: {}
-        };
+        const opts = { method, headers: {} };
         if (body !== null && body !== undefined) {
             opts.headers['Content-Type'] = 'application/json';
             opts.body = JSON.stringify(body);
@@ -218,9 +205,6 @@
         return apiRequest(endpointOrRelative, opts);
     }
 
-    /* --------------------------------------------------------
-     * 4. TOAST NOTIFICATIONS
-     * ------------------------------------------------------ */
     function getToastContainer() {
         let container = document.getElementById('toast-container');
         if (!container) {
@@ -262,9 +246,6 @@
         }, duration);
     }
 
-    /* --------------------------------------------------------
-     * 5. MODAL HELPERS
-     * ------------------------------------------------------ */
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -281,16 +262,16 @@
         }
     }
 
-    /* --------------------------------------------------------
-     * 6. SESSION / AUTH
-     * ------------------------------------------------------ */
     function extractSessionUser(data) {
         if (!data || typeof data !== 'object') return null;
-        if (data.user && typeof data.user === 'object') return data.user;
+        if (data.user && typeof data.user === 'object' && data.user.id) return data.user;
         if (data.data && typeof data.data === 'object') {
-            if (data.data.user && typeof data.data.user === 'object') return data.data.user;
+            if (data.data.user && typeof data.data.user === 'object' && data.data.user.id) {
+                return data.data.user;
+            }
             if (data.data.id) return data.data;
         }
+        if (data.id) return data;
         return null;
     }
 
@@ -304,26 +285,25 @@
             const { ok, status, data } = await apiJson(ENDPOINTS.auth, 'GET');
             const serverUser = extractSessionUser(data);
 
-            if (ok && data && data.success !== false && serverUser && serverUser.id) {
+            if (ok && serverUser && serverUser.id) {
                 state.currentAdminUser = serverUser;
                 writeStoredUser(serverUser);
-            } else if (status === 401 || (data && data.authenticated === false && !storedUser?.id)) {
-                window.location.href = 'login.html';
-                return false;
             } else if (!state.currentAdminUser || !state.currentAdminUser.id) {
-                window.location.href = 'login.html';
+                console.warn('Auth check did not return an active user:', { ok, status, data });
+                window.location.replace('login.html');
                 return false;
             }
-        } catch (_) {
+        } catch (err) {
+            console.warn('Auth check error:', err);
             if (!state.currentAdminUser || !state.currentAdminUser.id) {
-                window.location.href = 'login.html';
+                window.location.replace('login.html');
                 return false;
             }
         }
 
         const role = String(state.currentAdminUser.role || '').toLowerCase();
         if (role && !ADMIN_ROLES.has(role)) {
-            window.location.href = 'student-dashboard.html';
+            window.location.replace('student-dashboard.html');
             return false;
         }
 
@@ -354,12 +334,9 @@
         try {
             sessionStorage.removeItem(SESSION_STORAGE_KEY);
         } catch (_) { /* ignore */ }
-        window.location.href = 'login.html';
+        window.location.replace('login.html');
     }
 
-    /* --------------------------------------------------------
-     * 7. NAVIGATION
-     * ------------------------------------------------------ */
     function switchSection(sectionId) {
         state.currentSection = sectionId;
         document.querySelectorAll('.nav-item[data-section]').forEach((btn) => {
@@ -408,9 +385,6 @@
         }
     }
 
-    /* --------------------------------------------------------
-     * 8. DASHBOARD OVERVIEW
-     * ------------------------------------------------------ */
     async function loadDashboard() {
         const grid = document.getElementById('stats-grid');
         if (!grid) return;
@@ -444,14 +418,11 @@
                     <p class="muted">Awaiting admin review</p>
                 </div>
             `;
-        } catch (err) {
+        } catch (_) {
             grid.innerHTML = '<p class="muted">Network error while loading dashboard.</p>';
         }
     }
 
-    /* --------------------------------------------------------
-     * 9. STUDENTS MODULE
-     * ------------------------------------------------------ */
     async function loadStudents() {
         const tbody = document.getElementById('students-tbody');
         if (!tbody) return;
@@ -472,7 +443,7 @@
             state.students = data.data || [];
             state.studentsLoaded = true;
             renderStudentsTable();
-        } catch (err) {
+        } catch (_) {
             tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
         }
     }
@@ -692,7 +663,7 @@
                     showToast('User deleted successfully.', 'success');
                     return;
                 }
-            } catch (_) { /* ignore secondary failure */ }
+            } catch (_) { /* ignore */ }
             showToast(err.isTimeout
                 ? 'The request timed out. Please refresh and check if the user was deleted.'
                 : 'A network error occurred. Please try again.', 'error');
@@ -719,9 +690,6 @@
         });
     }
 
-    /* --------------------------------------------------------
-     * 10. CLUBS MODULE
-     * ------------------------------------------------------ */
     async function loadClubs() {
         const tbody = document.getElementById('clubs-tbody');
         if (!tbody) return;
@@ -735,4 +703,229 @@
             state.clubs = data.data || [];
             renderClubsTable();
         } catch (_) {
-            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">
+            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
+        }
+    }
+
+    function renderClubsTable() {
+        const tbody = document.getElementById('clubs-tbody');
+        if (!tbody) return;
+        if (!state.clubs.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">No clubs found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = state.clubs.map((c) => {
+            let statusBadgeHtml = '';
+            if (c.status === 'approved') statusBadgeHtml = '<span class="badge badge-approved">Approved</span>';
+            else if (c.status === 'pending') statusBadgeHtml = '<span class="badge badge-pending">Pending</span>';
+            else statusBadgeHtml = '<span class="badge badge-rejected">Rejected</span>';
+
+            const actions = c.status === 'pending'
+                ? `<button class="btn btn-sm btn-approve" data-action="approve-club" data-id="${c.id}">Approve</button>
+                   <button class="btn btn-sm btn-reject" data-action="reject-club" data-id="${c.id}" style="margin-left:6px;">Reject</button>`
+                : '—';
+
+            return `
+                <tr>
+                    <td style="font-weight:600;">${escapeHtml(c.name || '')}</td>
+                    <td>${escapeHtml(c.category || '—')}</td>
+                    <td>${escapeHtml(c.manager_name || '—')}</td>
+                    <td>${escapeHtml(formatDate(c.created_at))}</td>
+                    <td>${statusBadgeHtml}</td>
+                    <td>${actions}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function handleClubAction(id, action) {
+        try {
+            const { ok, data } = await apiJson(ENDPOINTS.clubs, 'PUT', {
+                id,
+                status: action === 'approve-club' ? 'approved' : 'rejected'
+            });
+            if (ok && data && data.success) {
+                showToast('Club ' + (action === 'approve-club' ? 'approved' : 'rejected') + '.', 'success');
+                await loadClubs();
+            } else {
+                showToast((data && data.message) || 'Unable to update club.', 'error');
+            }
+        } catch (_) {
+            showToast('Network error.', 'error');
+        }
+    }
+
+    function bindClubsTableEvents() {
+        const tbody = document.getElementById('clubs-tbody');
+        if (!tbody) return;
+        tbody.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const id = Number(btn.dataset.id);
+            if (!id) return;
+            await handleClubAction(id, btn.dataset.action);
+        });
+    }
+
+    async function loadBookings() {
+        const tbody = document.getElementById('bookings-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Loading bookings…</td></tr>';
+        try {
+            const { ok, data } = await apiJson(ENDPOINTS.bookings, 'GET');
+            if (!ok || !data || !data.success) {
+                tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Unable to load bookings.</td></tr>';
+                return;
+            }
+            state.bookings = data.data || [];
+            renderBookingsTable();
+        } catch (_) {
+            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
+        }
+    }
+
+    function renderBookingsTable() {
+        const tbody = document.getElementById('bookings-tbody');
+        if (!tbody) return;
+        if (!state.bookings.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">No bookings found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = state.bookings.map((b) => {
+            let badgeHtml = '';
+            if (b.status === 'confirmed') badgeHtml = '<span class="badge badge-confirmed">Confirmed</span>';
+            else if (b.status === 'pending') badgeHtml = '<span class="badge badge-pending">Pending</span>';
+            else if (b.status === 'cancelled') badgeHtml = '<span class="badge badge-cancelled">Cancelled</span>';
+            else badgeHtml = '<span class="badge">' + escapeHtml(b.status || '—') + '</span>';
+
+            return `
+                <tr>
+                    <td>${escapeHtml(b.facility || '—')}</td>
+                    <td>${escapeHtml(b.booked_by_name || '—')}</td>
+                    <td>${escapeHtml(formatDateTime(b.start_time))}</td>
+                    <td>${escapeHtml(formatDateTime(b.end_time))}</td>
+                    <td>${escapeHtml(b.purpose || '—')}</td>
+                    <td>${badgeHtml}</td>
+                    <td>${escapeHtml(formatDate(b.created_at))}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function loadAnnouncements() {
+        const list = document.getElementById('announcements-list');
+        if (!list) return;
+        list.innerHTML = '<p class="muted">Loading announcements…</p>';
+        try {
+            const { ok, data } = await apiJson(ENDPOINTS.announcements, 'GET');
+            if (!ok || !data || !data.success) {
+                list.innerHTML = '<p class="muted">Unable to load announcements.</p>';
+                return;
+            }
+            state.announcements = data.data || [];
+            renderAnnouncements();
+        } catch (_) {
+            list.innerHTML = '<p class="muted">Network error.</p>';
+        }
+    }
+
+    function renderAnnouncements() {
+        const list = document.getElementById('announcements-list');
+        if (!list) return;
+        if (!state.announcements.length) {
+            list.innerHTML = '<p class="muted">No announcements yet.</p>';
+            return;
+        }
+        list.innerHTML = state.announcements.map((a) => `
+            <div class="feed-item">
+                <div style="display:flex;justify-content:space-between;gap:12px;">
+                    <strong>${escapeHtml(a.title || '')}</strong>
+                    <span class="muted" style="font-size:0.8rem;">${escapeHtml(formatDateTime(a.created_at))}</span>
+                </div>
+                <p>${escapeHtml(a.body || '')}</p>
+                <div class="muted" style="font-size:0.8rem;">By ${escapeHtml(a.author_name || 'Admin')}</div>
+            </div>
+        `).join('');
+    }
+
+    async function loadProfile() {
+        const form = document.getElementById('profile-form');
+        if (!form || !state.currentAdminUser) return;
+        const setVal = (name, val) => {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (el) el.value = val ?? '';
+        };
+        setVal('name', state.currentAdminUser.name);
+        setVal('email', state.currentAdminUser.email);
+    }
+
+    function bindProfileForm() {
+        const form = document.getElementById('profile-form');
+        if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const status = document.getElementById('profile-form-status');
+            if (status) status.textContent = '';
+            const formData = new FormData(form);
+            const payload = {
+                name: (formData.get('name') || '').toString().trim(),
+                password: (formData.get('password') || '').toString()
+            };
+            try {
+                const { ok, data } = await apiJson(ENDPOINTS.profile, 'PUT', payload);
+                if (ok && data && data.success) {
+                    showToast('Profile updated.', 'success');
+                    await loadCurrentUser();
+                } else {
+                    showToast((data && data.message) || 'Unable to update profile.', 'error');
+                }
+            } catch (_) {
+                showToast('Network error.', 'error');
+            }
+        });
+    }
+
+    function bindModalCloseHandlers() {
+        document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.closeModal;
+                if (target) closeModal(target);
+            });
+        });
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+            backdrop.addEventListener('click', (e) => {
+                if (e.target === backdrop) {
+                    const modal = backdrop.closest('[id]');
+                    if (modal) closeModal(modal.id);
+                }
+            });
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('[id$="-modal"]').forEach((m) => {
+                    if (m.style.display === 'flex') closeModal(m.id);
+                });
+            }
+        });
+    }
+
+    async function init() {
+        bindNavigation();
+        bindStudentsToolbar();
+        bindStudentsTableEvents();
+        bindClubsTableEvents();
+        bindProfileForm();
+        bindModalCloseHandlers();
+
+        const authenticated = await loadCurrentUser();
+        if (!authenticated) return;
+
+        switchSection(state.currentSection || 'dashboard');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
