@@ -12,60 +12,146 @@ require_once __DIR__ . '/../config/database.php';
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
 const FACILITY_SLUG_MAP = [
-    'cricket'           => 'Cricket',
-    'basketball-court'  => 'Basketball Court',
-    'table-tennis'      => 'Table Tennis',
+    'cricket'           => 'Main Ground',
+    'basketball-court'  => 'Indoor Court',
+    'basketball'        => 'Indoor Court',
+    'table-tennis'      => 'Student Activity Centre',
     'swimming-pool'     => 'Swimming Pool',
-    'badminton-hall'    => 'Badminton Court',
-    'athletics-track'   => 'Athletics Track',
-    'netball-court'     => 'Netball',
-    'football-court'    => 'Football',
-    'rugby'             => 'Rugby',
-    'calisthenics'      => 'Calisthenics',
-    'archery'           => 'Archery',
-    'hockey'            => 'Hockey',
-    'taekwondo'         => 'Taekwondo',
-    'karate'            => 'Karate',
-    'powerlifting'      => 'Powerlifting',
-    'chess'             => 'Chess',
+    'swimming'          => 'Swimming Pool',
+    'badminton-hall'    => 'Indoor Court',
+    'badminton'         => 'Indoor Court',
+    'athletics-track'   => 'Main Ground',
+    'athletics'         => 'Main Ground',
+    'netball-court'     => 'Indoor Court',
+    'netball'           => 'Indoor Court',
+    'football-court'    => 'Main Ground',
+    'football'          => 'Main Ground',
+    'rugby'             => 'Phase 2 Ground',
+    'calisthenics'      => 'Gymnasium',
+    'archery'           => 'Phase 2 Ground',
+    'hockey'            => 'Main Ground',
+    'taekwondo'         => 'Gymnasium',
+    'karate'            => 'Gymnasium',
+    'powerlifting'      => 'Gymnasium',
+    'chess'             => 'Student Activity Centre',
+    'main-ground'       => 'Main Ground',
+    'indoor-court'      => 'Indoor Court',
+    'gymnasium'         => 'Gymnasium',
+    'phase-2-ground'    => 'Phase 2 Ground',
+    'student-activity-centre' => 'Student Activity Centre',
 ];
 
-const BOOKING_SELECT = 'SELECT b.id, b.facility, b.facility AS facility_name, b.booked_by, b.booked_by AS student_id,
-                               u.name AS booked_by_name, u.name AS student_name, b.sport,
-                               b.booking_date, b.start_time, b.end_time,
-                               CONCAT(b.booking_date, " ", TIME_FORMAT(b.start_time, "%H:%i"), " - ", TIME_FORMAT(b.end_time, "%H:%i")) AS date_time,
-                               b.status, b.notes, b.created_at
-                        FROM bookings b
-                        JOIN users u ON u.id = b.booked_by';
+const DEFAULT_FACILITIES = [
+    'Indoor Court',
+    'Main Ground',
+    'Swimming Pool',
+    'Gymnasium',
+    'Phase 2 Ground',
+    'Student Activity Centre',
+];
 
-function find_booking(int $id): ?array
+function bookings_columns(PDO $pdo): array
 {
-    $stmt = db()->prepare(BOOKING_SELECT . ' WHERE b.id = ? LIMIT 1');
+    static $cols = null;
+    if ($cols !== null) {
+        return $cols;
+    }
+    $stmt = $pdo->query('SHOW COLUMNS FROM bookings');
+    $cols = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $field = (string) ($row['Field'] ?? $row['field'] ?? '');
+        if ($field !== '') {
+            $cols[$field] = true;
+        }
+    }
+    return $cols;
+}
+
+function build_booking_select(PDO $pdo): string
+{
+    $cols = bookings_columns($pdo);
+
+    $selectParts = [
+        'b.id',
+        'b.facility',
+        'b.facility AS facility_name',
+        'b.booked_by',
+        'b.booked_by AS student_id',
+        'u.name AS booked_by_name',
+        'u.name AS student_name',
+        isset($cols['sport']) ? 'b.sport' : '\'General\' AS sport',
+        'b.booking_date',
+        'b.start_time',
+        'b.end_time',
+        'CONCAT(b.booking_date, " ", TIME_FORMAT(b.start_time, "%H:%i"), " - ", TIME_FORMAT(b.end_time, "%H:%i")) AS date_time',
+        'b.status',
+        isset($cols['notes']) ? 'b.notes' : '\'\' AS notes',
+        isset($cols['created_at']) ? 'b.created_at' : 'CURRENT_TIMESTAMP AS created_at',
+    ];
+
+    return 'SELECT ' . implode(', ', $selectParts) . ' FROM bookings b JOIN users u ON u.id = b.booked_by';
+}
+
+function find_booking(PDO $pdo, int $id): ?array
+{
+    $sql = build_booking_select($pdo) . ' WHERE b.id = ? LIMIT 1';
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([$id]);
     return $stmt->fetch() ?: null;
 }
 
-function resolve_facility_name(string $rawFacility): string
+function resolve_facility_name(PDO $pdo, string $rawFacility): string
 {
     $clean = trim($rawFacility);
     if ($clean === '') {
         return '';
     }
-    $slugKey = strtolower($clean);
-    if (isset(FACILITY_SLUG_MAP[$slugKey])) {
-        return FACILITY_SLUG_MAP[$slugKey];
+
+    $normalizedKey = strtolower(preg_replace('/[\s_]+/', '-', $clean) ?? $clean);
+    $candidate = FACILITY_SLUG_MAP[$normalizedKey] ?? FACILITY_SLUG_MAP[strtolower($clean)] ?? $clean;
+
+    $fStmt = $pdo->prepare('SELECT name FROM facilities WHERE LOWER(name) = LOWER(?) LIMIT 1');
+    $fStmt->execute([$candidate]);
+    $row = $fStmt->fetch();
+    if ($row) {
+        return (string) $row['name'];
     }
-    return $clean;
+
+    if ($candidate !== $clean) {
+        $fStmt->execute([$clean]);
+        $row = $fStmt->fetch();
+        if ($row) {
+            return (string) $row['name'];
+        }
+    }
+
+    foreach (DEFAULT_FACILITIES as $defaultFac) {
+        try {
+            $ins = $pdo->prepare('INSERT IGNORE INTO facilities (name) VALUES (?)');
+            $ins->execute([$defaultFac]);
+        } catch (Throwable $ignored) {
+            // ignore if already present or schema differs
+        }
+    }
+
+    $fStmt->execute([$candidate]);
+    $row = $fStmt->fetch();
+    if ($row) {
+        return (string) $row['name'];
+    }
+
+    return $candidate;
 }
 
-$method = request_method();
-$user   = require_login();
-$body   = in_array($method, ['POST', 'PUT'], true) ? read_json_body() : [];
+$method  = request_method();
+$user    = require_login();
+$body    = in_array($method, ['POST', 'PUT'], true) ? read_json_body() : [];
 $isAdmin = is_admin_role($user['role'] ?? '');
+$pdo     = db();
 
 /* ---------- GET: list ---------- */
 if ($method === 'GET') {
-    $sql    = BOOKING_SELECT;
+    $sql    = build_booking_select($pdo);
     $where  = [];
     $params = [];
 
@@ -73,6 +159,7 @@ if ($method === 'GET') {
         $where[]  = 'b.booked_by = ?';
         $params[] = $user['id'];
     }
+
     $status = strtolower(clean_text($_GET['status'] ?? ''));
     if ($status !== '') {
         if ($status === 'approved') {
@@ -84,12 +171,17 @@ if ($method === 'GET') {
         $where[]  = 'b.status = ?';
         $params[] = $status;
     }
+
     if ($where) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
-    $sql .= ' ORDER BY b.created_at DESC, b.id DESC';
 
-    $stmt = db()->prepare($sql);
+    $cols = bookings_columns($pdo);
+    $sql .= isset($cols['created_at'])
+        ? ' ORDER BY b.created_at DESC, b.id DESC'
+        : ' ORDER BY b.id DESC';
+
+    $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     json_response(['success' => true, 'data' => $stmt->fetchAll()]);
 }
@@ -114,20 +206,23 @@ if ($isUpdate) {
     if (!in_array($status, BOOKING_STATUSES, true)) {
         json_error('Status must be one of: ' . implode(', ', BOOKING_STATUSES) . '.', 400);
     }
-    if (find_booking($id) === null) {
+    if (find_booking($pdo, $id) === null) {
         json_error('Booking not found.', 404);
     }
 
-    $stmt = db()->prepare('UPDATE bookings SET status = ? WHERE id = ?');
+    $stmt = $pdo->prepare('UPDATE bookings SET status = ? WHERE id = ?');
     $stmt->execute([$status, $id]);
-    json_response(['success' => true, 'data' => find_booking($id)]);
+    json_response(['success' => true, 'data' => find_booking($pdo, $id)]);
 }
 
 /* ---------- POST: create ---------- */
 if ($method === 'POST') {
     $rawFacility = clean_text($body['facility_name'] ?? $body['facility'] ?? $body['facility_id'] ?? '');
-    $facility    = resolve_facility_name($rawFacility);
-    $sport       = clean_text($body['sport'] ?? 'General');
+    $facility    = resolve_facility_name($pdo, $rawFacility);
+    $sport       = clean_text($body['sport'] ?? '');
+    if ($sport === '') {
+        $sport = $rawFacility !== '' ? ucwords(str_replace('-', ' ', $rawFacility)) : 'General';
+    }
     $date        = clean_text($body['booking_date'] ?? $body['date'] ?? '');
     $start       = clean_text($body['start_time'] ?? $body['start'] ?? '');
     $end         = clean_text($body['end_time'] ?? $body['end'] ?? '');
@@ -137,37 +232,15 @@ if ($method === 'POST') {
         json_error('facility, booking_date, start_time, and end_time are required.', 400);
     }
 
-    $pdo = db();
-
     $userId = to_id($user['id'] ?? null);
     if ($userId === null) {
         json_error('Your session user ID is missing. Please sign out and sign in again.', 401);
     }
+
     $uStmt = $pdo->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
     $uStmt->execute([$userId]);
     if (!$uStmt->fetch()) {
         json_error('Logged-in account was not found in database. Please sign out and sign in again.', 401);
-    }
-
-    $fStmt = $pdo->prepare('SELECT name FROM facilities WHERE LOWER(name) = LOWER(?) LIMIT 1');
-    $fStmt->execute([$facility]);
-    $matchedRow = $fStmt->fetch();
-    if ($matchedRow) {
-        $facility = (string) $matchedRow['name'];
-    } else {
-        $countStmt = $pdo->query('SELECT COUNT(*) FROM facilities');
-        $facilityTableCount = (int) $countStmt->fetchColumn();
-        if ($facilityTableCount > 0 && !in_array($facility, FACILITY_SLUG_MAP, true)) {
-            json_error('Unknown facility selected.', 400);
-        }
-        if ($facilityTableCount === 0) {
-            try {
-                $insFac = $pdo->prepare('INSERT IGNORE INTO facilities (name) VALUES (?)');
-                $insFac->execute([$facility]);
-            } catch (Throwable $ignored) {
-                // ignore if `facilities` schema differs
-            }
-        }
     }
 
     $startNorm = strlen($start) === 5 ? $start . ':00' : $start;
@@ -176,16 +249,42 @@ if ($method === 'POST') {
         json_error('end_time must be later than start_time.', 400);
     }
 
+    $cols = bookings_columns($pdo);
+    $insertCols = ['facility', 'booked_by'];
+    $insertVals = [$facility, $userId];
+
+    if (isset($cols['sport'])) {
+        $insertCols[] = 'sport';
+        $insertVals[] = $sport;
+    }
+
+    $insertCols[] = 'booking_date';
+    $insertVals[] = $date;
+    $insertCols[] = 'start_time';
+    $insertVals[] = $startNorm;
+    $insertCols[] = 'end_time';
+    $insertVals[] = $endNorm;
+
+    if (isset($cols['status'])) {
+        $insertCols[] = 'status';
+        $insertVals[] = 'pending';
+    }
+    if (isset($cols['notes'])) {
+        $insertCols[] = 'notes';
+        $insertVals[] = $notes;
+    }
+
+    $placeholders = implode(', ', array_fill(0, count($insertCols), '?'));
+    $sql = 'INSERT INTO bookings (' . implode(', ', $insertCols) . ') VALUES (' . $placeholders . ')';
+
     try {
-        $stmt = $pdo->prepare(
-            "INSERT INTO bookings (facility, booked_by, sport, booking_date, start_time, end_time, status, notes)
-             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
-        );
-        $stmt->execute([$facility, $userId, $sport, $date, $startNorm, $endNorm, $notes]);
-        json_response(['success' => true, 'data' => find_booking((int) $pdo->lastInsertId())], 201);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($insertVals);
+        $newId = (int) $pdo->lastInsertId();
+        json_response(['success' => true, 'data' => find_booking($pdo, $newId)], 201);
     } catch (PDOException $e) {
         if ((int) $e->getCode() === 23000 || str_contains($e->getMessage(), '1452')) {
-            json_error('Could not save booking due to a database reference mismatch (check user account or facility record).', 400);
+            json_error('Could not save booking due to a foreign key mismatch on user or facility.', 400);
         }
         throw $e;
     }
@@ -197,7 +296,7 @@ if ($method === 'DELETE') {
     if ($id === null) {
         json_error('A valid booking id is required.', 400);
     }
-    $booking = find_booking($id);
+    $booking = find_booking($pdo, $id);
     if ($booking === null) {
         json_error('Booking not found.', 404);
     }
@@ -209,7 +308,7 @@ if ($method === 'DELETE') {
             json_error('Only pending bookings can be cancelled.', 409);
         }
     }
-    $stmt = db()->prepare('DELETE FROM bookings WHERE id = ?');
+    $stmt = $pdo->prepare('DELETE FROM bookings WHERE id = ?');
     $stmt->execute([$id]);
     json_response(['success' => true, 'message' => 'Booking cancelled.']);
 }
