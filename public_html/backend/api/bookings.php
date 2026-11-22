@@ -11,6 +11,25 @@ require_once __DIR__ . '/../config/database.php';
 
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
+const FACILITY_SLUG_MAP = [
+    'cricket'           => 'Cricket',
+    'basketball-court'  => 'Basketball Court',
+    'table-tennis'      => 'Table Tennis',
+    'swimming-pool'     => 'Swimming Pool',
+    'badminton-hall'    => 'Badminton Court',
+    'athletics-track'   => 'Athletics Track',
+    'netball-court'     => 'Netball',
+    'football-court'    => 'Football',
+    'rugby'             => 'Rugby',
+    'calisthenics'      => 'Calisthenics',
+    'archery'           => 'Archery',
+    'hockey'            => 'Hockey',
+    'taekwondo'         => 'Taekwondo',
+    'karate'            => 'Karate',
+    'powerlifting'      => 'Powerlifting',
+    'chess'             => 'Chess',
+];
+
 const BOOKING_SELECT = 'SELECT b.id, b.facility, b.facility AS facility_name, b.booked_by, b.booked_by AS student_id,
                                u.name AS booked_by_name, u.name AS student_name, b.sport,
                                b.booking_date, b.start_time, b.end_time,
@@ -24,6 +43,19 @@ function find_booking(int $id): ?array
     $stmt = db()->prepare(BOOKING_SELECT . ' WHERE b.id = ? LIMIT 1');
     $stmt->execute([$id]);
     return $stmt->fetch() ?: null;
+}
+
+function resolve_facility_name(string $rawFacility): string
+{
+    $clean = trim($rawFacility);
+    if ($clean === '') {
+        return '';
+    }
+    $slugKey = strtolower($clean);
+    if (isset(FACILITY_SLUG_MAP[$slugKey])) {
+        return FACILITY_SLUG_MAP[$slugKey];
+    }
+    return $clean;
 }
 
 $method = request_method();
@@ -93,21 +125,49 @@ if ($isUpdate) {
 
 /* ---------- POST: create ---------- */
 if ($method === 'POST') {
-    $facility = clean_text($body['facility'] ?? $body['facility_name'] ?? '');
-    $sport    = clean_text($body['sport'] ?? 'General');
-    $date     = clean_text($body['booking_date'] ?? '');
-    $start    = clean_text($body['start_time'] ?? '');
-    $end      = clean_text($body['end_time'] ?? '');
-    $notes    = clean_text($body['notes'] ?? '');
+    $rawFacility = clean_text($body['facility_name'] ?? $body['facility'] ?? $body['facility_id'] ?? '');
+    $facility    = resolve_facility_name($rawFacility);
+    $sport       = clean_text($body['sport'] ?? 'General');
+    $date        = clean_text($body['booking_date'] ?? $body['date'] ?? '');
+    $start       = clean_text($body['start_time'] ?? $body['start'] ?? '');
+    $end         = clean_text($body['end_time'] ?? $body['end'] ?? '');
+    $notes       = clean_text($body['notes'] ?? '');
 
     if ($facility === '' || $date === '' || $start === '' || $end === '') {
         json_error('facility, booking_date, start_time, and end_time are required.', 400);
     }
 
-    $fStmt = db()->prepare('SELECT name FROM facilities WHERE name = ? LIMIT 1');
+    $pdo = db();
+
+    $userId = to_id($user['id'] ?? null);
+    if ($userId === null) {
+        json_error('Your session user ID is missing. Please sign out and sign in again.', 401);
+    }
+    $uStmt = $pdo->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+    $uStmt->execute([$userId]);
+    if (!$uStmt->fetch()) {
+        json_error('Logged-in account was not found in database. Please sign out and sign in again.', 401);
+    }
+
+    $fStmt = $pdo->prepare('SELECT name FROM facilities WHERE LOWER(name) = LOWER(?) LIMIT 1');
     $fStmt->execute([$facility]);
-    if (!$fStmt->fetch()) {
-        json_error('Unknown facility selected.', 400);
+    $matchedRow = $fStmt->fetch();
+    if ($matchedRow) {
+        $facility = (string) $matchedRow['name'];
+    } else {
+        $countStmt = $pdo->query('SELECT COUNT(*) FROM facilities');
+        $facilityTableCount = (int) $countStmt->fetchColumn();
+        if ($facilityTableCount > 0 && !in_array($facility, FACILITY_SLUG_MAP, true)) {
+            json_error('Unknown facility selected.', 400);
+        }
+        if ($facilityTableCount === 0) {
+            try {
+                $insFac = $pdo->prepare('INSERT IGNORE INTO facilities (name) VALUES (?)');
+                $insFac->execute([$facility]);
+            } catch (Throwable $ignored) {
+                // ignore if `facilities` schema differs
+            }
+        }
     }
 
     $startNorm = strlen($start) === 5 ? $start . ':00' : $start;
@@ -116,12 +176,19 @@ if ($method === 'POST') {
         json_error('end_time must be later than start_time.', 400);
     }
 
-    $stmt = db()->prepare(
-        "INSERT INTO bookings (facility, booked_by, sport, booking_date, start_time, end_time, status, notes)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
-    );
-    $stmt->execute([$facility, $user['id'], $sport, $date, $startNorm, $endNorm, $notes]);
-    json_response(['success' => true, 'data' => find_booking((int) db()->lastInsertId())], 201);
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO bookings (facility, booked_by, sport, booking_date, start_time, end_time, status, notes)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
+        );
+        $stmt->execute([$facility, $userId, $sport, $date, $startNorm, $endNorm, $notes]);
+        json_response(['success' => true, 'data' => find_booking((int) $pdo->lastInsertId())], 201);
+    } catch (PDOException $e) {
+        if ((int) $e->getCode() === 23000 || str_contains($e->getMessage(), '1452')) {
+            json_error('Could not save booking due to a database reference mismatch (check user account or facility record).', 400);
+        }
+        throw $e;
+    }
 }
 
 /* ---------- DELETE: cancel ---------- */
