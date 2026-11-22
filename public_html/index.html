@@ -5,6 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign in · NSBM SportsHub</title>
   <link rel="stylesheet" href="index.css">
+  <style>
+    .password-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-wrap input {
+      width: 100%;
+      padding-right: 4.5rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 0.65rem;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      opacity: 0.75;
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0.25rem 0.4rem;
+    }
+
+    .password-toggle:hover,
+    .password-toggle:focus-visible {
+      opacity: 1;
+    }
+  </style>
 </head>
 <body>
   <main class="login-layout">
@@ -72,7 +103,10 @@
           </div>
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="Enter your password">
+            <div class="password-wrap">
+              <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="Enter your password">
+              <button type="button" id="toggle-password" class="password-toggle" aria-label="Show password" aria-pressed="false">Show</button>
+            </div>
           </div>
           <div class="form-error" role="alert"></div>
           <button type="submit" class="btn btn-primary login-submit"><span>Sign in</span><span aria-hidden="true">→</span></button>
@@ -85,6 +119,21 @@
     </section>
   </main>
 
+  <script>
+    (function () {
+      const input = document.getElementById('password');
+      const btn = document.getElementById('toggle-password');
+      if (!input || !btn) return;
+
+      btn.addEventListener('click', function () {
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.textContent = isHidden ? 'Hide' : 'Show';
+        btn.setAttribute('aria-pressed', String(isHidden));
+        btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      });
+    })();
+  </script>
   <script type="module" src="login.js"></script>
 </body>
 </html>
