@@ -1,931 +1,606 @@
-/* ============================================================
- * admin-dashboard.js
- * NSBM Sports Admin Dashboard — Client Logic
- * ============================================================ */
+const ADMIN_ROLES = new Set(['admin', 'sports_admin', 'super_admin']);
+const SESSION_STORAGE_KEY = 'sportshub_user';
 
-(function () {
-    'use strict';
+const els = {
+  welcome: document.getElementById('admin-welcome'),
+  meta: document.getElementById('admin-meta'),
+  logoutBtn: document.getElementById('logout-btn'),
+  navButtons: Array.from(document.querySelectorAll('.nav-item[data-target]')),
+  sections: Array.from(document.querySelectorAll('.admin-section')),
 
-    const SESSION_STORAGE_KEY = 'sportshub_user';
-    const ADMIN_ROLES = new Set(['admin', 'sports_admin', 'super_admin']);
+  addStudentForm: document.getElementById('add-student-form'),
+  studentName: document.getElementById('student-name'),
+  studentNumber: document.getElementById('student-number'),
+  studentFaculty: document.getElementById('student-faculty'),
+  studentBatch: document.getElementById('student-batch'),
+  studentEmail: document.getElementById('student-email'),
+  studentPassword: document.getElementById('student-password'),
+  addStudentStatus: document.getElementById('add-student-status'),
 
-    const state = {
-        currentAdminUser: null,
-        currentSection: 'dashboard',
-        resolvedApiBase: null,
-        students: [],
-        studentsLoaded: false,
-        clubs: [],
-        bookings: [],
-        announcements: [],
-        filters: {
-            students: { search: '', status: '' },
-            clubs: { search: '', status: '' },
-            bookings: { search: '', status: '' }
-        }
-    };
+  studentSearch: document.getElementById('student-search'),
+  studentStatus: document.getElementById('student-status-filter'),
+  refreshStudents: document.getElementById('refresh-students-btn'),
+  studentsBody: document.getElementById('registered-students-body'),
 
-    const ENDPOINTS = {
-        auth: 'auth.php',
-        dashboard: 'dashboard.php',
-        students: 'students.php',
-        clubs: 'clubs.php',
-        bookings: 'bookings.php',
-        announcements: 'announcements.php',
-        profile: 'profile.php'
-    };
+  bookingStatus: document.getElementById('booking-status-filter'),
+  refreshBookings: document.getElementById('refresh-bookings-btn'),
+  bookingsBody: document.getElementById('bookings-approval-body'),
 
-    function escapeHtml(str) {
-        if (str === null || str === undefined) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+  clubRequestsBody: document.getElementById('club-requests-body'),
+  createClubForm: document.getElementById('create-club-form'),
+  clubName: document.getElementById('club-name'),
+  clubSport: document.getElementById('club-sport'),
+  clubPresident: document.getElementById('club-president'),
+  clubDesc: document.getElementById('club-desc'),
+  createClubStatus: document.getElementById('create-club-status'),
+
+  announcementForm: document.getElementById('announcement-form'),
+  announcementTitle: document.getElementById('announcement-title'),
+  announcementText: document.getElementById('announcement-text'),
+  announcementStatus: document.getElementById('announcement-status'),
+  announcementsList: document.getElementById('announcements-list'),
+
+  addInventoryForm: document.getElementById('add-inventory-form'),
+  invItemName: document.getElementById('inv-item-name'),
+  invTotalStock: document.getElementById('inv-total-stock'),
+  inventoryStatus: document.getElementById('inventory-status'),
+  inventoryContainer: document.getElementById('inventory-container'),
+};
+
+let resolvedApiBase = null;
+let currentAdminUser = null;
+
+function readStoredUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredUser(user) {
+  try {
+    if (user && typeof user === 'object' && user.id) {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function fetchWithTimeout(url, options = {}, ms = 45000) {
+  const controller = new AbortController();
+  const timer = ms > 0 ? setTimeout(() => controller.abort('Request timed out'), ms) : null;
+  try {
+    return await fetch(url, {
+      credentials: 'include',
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function resolveApiBase() {
+  if (resolvedApiBase) return resolvedApiBase;
+  for (const candidate of ['backend/api', 'api']) {
+    try {
+      const res = await fetchWithTimeout(`${candidate}/auth.php`, { method: 'GET' }, 15000);
+      const text = await res.text();
+      JSON.parse(text);
+      resolvedApiBase = candidate;
+      return resolvedApiBase;
+    } catch {
+      // try next candidate
+    }
+  }
+  resolvedApiBase = 'backend/api';
+  return resolvedApiBase;
+}
+
+async function api(path, options = {}) {
+  const base = await resolveApiBase();
+  const activeUser = currentAdminUser || readStoredUser();
+  const authHeaders = {};
+  if (activeUser?.id) authHeaders['X-User-Id'] = String(activeUser.id);
+  if (activeUser?.role) authHeaders['X-User-Role'] = String(activeUser.role);
+
+  const res = await fetchWithTimeout(`${base}/${path}`, {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
+  });
+
+  const text = await res.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const snippet = text.trim().slice(0, 120) || 'empty body';
+    throw new Error(`HTTP ${res.status} from ${base}/${path}: ${snippet}`);
+  }
+
+  if (!res.ok || data.success === false) {
+    const err = new Error(data.error || data.message || `Request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function setActiveTab(targetId) {
+  els.navButtons.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.target === targetId);
+  });
+  els.sections.forEach((sec) => {
+    const isTarget = sec.id === targetId;
+    sec.hidden = !isTarget;
+    sec.classList.toggle('active-section', isTarget);
+  });
+}
+
+function extractSessionUser(session) {
+  if (!session || typeof session !== 'object') return null;
+  if (session.user && typeof session.user === 'object' && session.user.id) return session.user;
+  if (session.data && typeof session.data === 'object') {
+    if (session.data.user && typeof session.data.user === 'object' && session.data.user.id) {
+      return session.data.user;
+    }
+    if (session.data.id) return session.data;
+  }
+  return null;
+}
+
+async function ensureAdminSession() {
+  const storedUser = readStoredUser();
+  if (storedUser && storedUser.id) {
+    currentAdminUser = storedUser;
+  }
+
+  try {
+    const session = await api('auth.php', { method: 'GET' });
+    const serverUser = extractSessionUser(session);
+    if (serverUser && serverUser.id) {
+      currentAdminUser = serverUser;
+      writeStoredUser(serverUser);
+    }
+  } catch (err) {
+    if (els.meta && !currentAdminUser?.id) {
+      els.meta.textContent = `Workspace connected · ${err.message}`;
+    }
+  }
+
+  const user = currentAdminUser || {};
+  const role = String(user.role || '').toLowerCase();
+  if (role && !ADMIN_ROLES.has(role)) {
+    window.location.replace('student-dashboard.html');
+    return null;
+  }
+
+  if (els.welcome && user.name) {
+    els.welcome.textContent = `Welcome, ${user.name}`;
+  }
+  if (els.meta) {
+    els.meta.textContent = user.email
+      ? `${user.email} · Role: ${user.role || 'admin'}`
+      : 'Connected to NSBM SportsHub workspace.';
+  }
+  return user;
+}
+
+function isProtectedUser(u) {
+  const studentCode = String(u.student_id || '').toUpperCase();
+  const userEmail = String(u.email || '').toLowerCase();
+  const isPrimaryAdmin = studentCode === 'ADMIN001' || userEmail === 'admin@nsbmsport.ac.lk';
+  const isSelf = currentAdminUser?.id && Number(u.id) === Number(currentAdminUser.id);
+  return Boolean(isPrimaryAdmin || isSelf);
+}
+
+async function loadStudents() {
+  if (!els.studentsBody) return;
+  try {
+    const params = new URLSearchParams();
+    const q = els.studentSearch?.value.trim() || '';
+    const st = els.studentStatus?.value || '';
+    if (q) params.set('search', q);
+    if (st) params.set('status', st);
+
+    const res = await api(`students.php${params.toString() ? `?${params}` : ''}`);
+    const rows = Array.isArray(res.data) ? res.data : [];
+
+    if (!rows.length) {
+      els.studentsBody.innerHTML = '<tr><td colspan="7" class="muted cell-center">No records yet.</td></tr>';
+      return;
     }
 
-    function formatDate(iso) {
-        if (!iso) return '—';
-        try {
-            const d = new Date(iso);
-            if (isNaN(d.getTime())) return '—';
-            return d.toLocaleDateString('en-GB', {
-                year: 'numeric', month: 'short', day: '2-digit'
-            });
-        } catch (_) {
-            return '—';
-        }
+    els.studentsBody.innerHTML = rows.map((u) => {
+      const active = Number(u.is_active ?? (u.status === 'approved' ? 1 : 0)) === 1;
+      const badgeClass = active ? 'badge-active' : 'badge-inactive';
+      const statusLabel = active ? 'active' : (u.status || 'inactive');
+      const facBatch = [u.faculty, u.batch_number ? `Batch ${u.batch_number}` : '']
+        .filter(Boolean)
+        .join(' · ') || '—';
+
+      const deleteBtnHtml = !isProtectedUser(u)
+        ? `<button type="button" class="btn-sm btn-reject" data-delete-student-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Delete</button>`
+        : `<span class="muted">Protected</span>`;
+
+      return `
+        <tr>
+          <td>${esc(u.student_id || u.id)}</td>
+          <td>${esc(u.name)}</td>
+          <td>${esc(facBatch)}</td>
+          <td>${esc(u.email)}</td>
+          <td>${esc(u.role)}</td>
+          <td><span class="badge ${badgeClass}">${esc(statusLabel)}</span></td>
+          <td>
+            <button type="button" class="btn-sm btn-approve" data-reset-pw-id="${esc(u.id)}" data-student-name="${esc(u.name)}">Set Password</button>
+            ${deleteBtnHtml}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch {
+    els.studentsBody.innerHTML = '<tr><td colspan="7" class="muted cell-center">No records yet.</td></tr>';
+  }
+}
+
+async function loadBookings() {
+  if (!els.bookingsBody) return;
+  try {
+    const st = els.bookingStatus?.value || '';
+    const qs = st ? `?status=${encodeURIComponent(st)}` : '';
+    const res = await api(`bookings.php${qs}`);
+    const rows = Array.isArray(res.data) ? res.data : [];
+
+    if (!rows.length) {
+      els.bookingsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
+      return;
     }
 
-    function formatDateTime(iso) {
-        if (!iso) return '—';
-        try {
-            const d = new Date(iso);
-            if (isNaN(d.getTime())) return '—';
-            return d.toLocaleString('en-GB', {
-                year: 'numeric', month: 'short', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            });
-        } catch (_) {
-            return '—';
-        }
+    els.bookingsBody.innerHTML = rows.map((b) => {
+      const status = String(b.status || 'pending');
+      const badgeClass = status === 'confirmed' || status === 'approved' ? 'badge-confirmed'
+        : status === 'cancelled' || status === 'rejected' ? 'badge-cancelled' : 'badge-pending';
+      const facilityLabel = b.facility_name || b.facility || 'Facility';
+      const sportSuffix = b.sport ? ` (${b.sport})` : '';
+      const when = b.date_time || `${b.booking_date || ''} ${b.start_time || ''}`.trim();
+
+      return `
+        <tr>
+          <td>${esc(b.student_name || b.booked_by_name || b.booked_by || '')}</td>
+          <td>${esc(facilityLabel + sportSuffix)}</td>
+          <td>${esc(when)}</td>
+          <td><span class="badge ${badgeClass}">${esc(status)}</span></td>
+          <td>
+            <button type="button" class="btn-sm btn-approve" data-booking-id="${esc(b.id)}" data-status="confirmed">Confirm</button>
+            <button type="button" class="btn-sm btn-reject" data-booking-id="${esc(b.id)}" data-status="cancelled">Cancel</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch {
+    els.bookingsBody.innerHTML = '<tr><td colspan="5" class="muted cell-center">No records yet.</td></tr>';
+  }
+}
+
+async function loadClubRequests() {
+  if (!els.clubRequestsBody) return;
+  try {
+    const res = await api('clubs.php?view=requests&status=pending');
+    const rows = Array.isArray(res.data) ? res.data : [];
+
+    if (!rows.length) {
+      els.clubRequestsBody.innerHTML = '<tr><td colspan="3" class="muted cell-center">No records yet.</td></tr>';
+      return;
     }
 
-    function roleLabel(role) {
-        const map = {
-            student: 'Student',
-            club_manager: 'Club Manager',
-            sports_admin: 'Sports Admin',
-            admin: 'Admin',
-            super_admin: 'Super Admin'
-        };
-        return map[role] || (role || 'User');
+    els.clubRequestsBody.innerHTML = rows.map((r) => `
+      <tr>
+        <td>${esc(r.student_name)}</td>
+        <td>${esc(r.club_name)}</td>
+        <td>
+          <button type="button" class="btn-sm btn-approve" data-req-id="${esc(r.id)}" data-status="approved">Approve</button>
+          <button type="button" class="btn-sm btn-reject" data-req-id="${esc(r.id)}" data-status="rejected">Reject</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch {
+    els.clubRequestsBody.innerHTML = '<tr><td colspan="3" class="muted cell-center">No records yet.</td></tr>';
+  }
+}
+
+async function loadAnnouncements() {
+  if (!els.announcementsList) return;
+  try {
+    const res = await api('announcements.php?limit=10');
+    const rows = Array.isArray(res.data) ? res.data : [];
+    if (!rows.length) {
+      els.announcementsList.innerHTML = '<p class="muted">No records yet.</p>';
+      return;
+    }
+    els.announcementsList.innerHTML = rows.map((a) => `
+      <div class="feed-item">
+        <strong>${esc(a.title)}</strong>
+        <p>${esc(a.content)}</p>
+        <small class="muted">By ${esc(a.posted_by_name || 'Admin')} · ${esc(a.created_at || '')}</small>
+      </div>
+    `).join('');
+  } catch {
+    els.announcementsList.innerHTML = '<p class="muted">No records yet.</p>';
+  }
+}
+
+async function loadInventory() {
+  if (!els.inventoryContainer) return;
+  try {
+    const res = await api('inventory.php');
+    const items = Array.isArray(res.data) ? res.data : [];
+    if (!items.length) {
+      els.inventoryContainer.innerHTML = '<div class="feed-item"><p class="muted">No records yet.</p></div>';
+      return;
     }
 
-    function statusBadge(isActive) {
-        if (isActive) {
-            return '<span class="badge badge-active">Active</span>';
-        }
-        return '<span class="badge badge-inactive">Inactive</span>';
+    els.inventoryContainer.innerHTML = items.map((item) => {
+      const total = Number(item.total_stock ?? item.total ?? 0);
+      const issued = Number(item.issued_count ?? 0);
+      const avail = Math.max(0, total - issued);
+      return `
+        <div class="inv-row" data-inv-id="${esc(item.id)}">
+          <div>
+            <strong>${esc(item.item_name || item.name)}</strong>
+            <div class="muted">Available: <strong>${avail}</strong> / ${total}</div>
+          </div>
+          <div class="inv-controls">
+            <label class="muted">Total: <input type="number" min="0" class="inv-total" value="${total}"></label>
+            <label class="muted">Issued: <input type="number" min="0" class="inv-issued" value="${issued}"></label>
+            <button type="button" class="btn-sm btn-approve inv-save">Save</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch {
+    els.inventoryContainer.innerHTML = '<div class="feed-item"><p class="muted">No records yet.</p></div>';
+  }
+}
+
+function bindEvents() {
+  els.navButtons.forEach((btn) => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.target));
+  });
+
+  els.logoutBtn?.addEventListener('click', async () => {
+    try {
+      await api('auth.php?action=logout', { method: 'POST' });
+    } catch {
+      // ignore sign-out errors and redirect
+    } finally {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      window.location.replace('index.html');
     }
+  });
 
-    function readStoredUser() {
-        try {
-            const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            return parsed && typeof parsed === 'object' ? parsed : null;
-        } catch (_) {
-            return null;
-        }
+  els.addStudentForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (els.addStudentStatus) els.addStudentStatus.textContent = 'Registering student...';
+    try {
+      await api('students.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: els.studentName?.value.trim() || '',
+          student_id: els.studentNumber?.value.trim() || '',
+          faculty: els.studentFaculty?.value.trim() || '',
+          batch_number: els.studentBatch?.value.trim() || '',
+          email: els.studentEmail?.value.trim() || '',
+          password: els.studentPassword?.value || '',
+          role: 'student',
+          is_active: 1,
+        }),
+      });
+      els.addStudentForm.reset();
+      if (els.addStudentStatus) {
+        els.addStudentStatus.textContent = 'Student registered. They can sign in now with their email and password.';
+      }
+      await loadStudents();
+    } catch (err) {
+      if (els.addStudentStatus) els.addStudentStatus.textContent = err.message;
     }
+  });
 
-    function writeStoredUser(user) {
-        try {
-            if (user && typeof user === 'object') {
-                sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
-            }
-        } catch (_) { /* ignore */ }
-    }
-
-    async function fetchWithTimeout(url, options = {}, timeout = 45000) {
-        const controller = new AbortController();
-        const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
-
-        try {
-            return await fetch(url, {
-                ...options,
-                signal: controller.signal,
-                credentials: 'include'
-            });
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                const err = new Error('Request timed out');
-                err.isTimeout = true;
-                throw err;
-            }
-            throw error;
-        } finally {
-            if (timer) clearTimeout(timer);
-        }
-    }
-
-    async function resolveApiBase() {
-        if (state.resolvedApiBase) return state.resolvedApiBase;
-        for (const candidate of ['backend/api', 'api']) {
-            try {
-                const res = await fetchWithTimeout(`${candidate}/${ENDPOINTS.auth}`, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                }, 15000);
-                const text = await res.text();
-                JSON.parse(text);
-                state.resolvedApiBase = candidate;
-                return state.resolvedApiBase;
-            } catch (_) {
-                // try next candidate
-            }
-        }
-        state.resolvedApiBase = 'backend/api';
-        return state.resolvedApiBase;
-    }
-
-    function buildEndpointUrl(endpointOrRelative) {
-        if (/^https?:\/\//i.test(endpointOrRelative)) {
-            return endpointOrRelative;
-        }
-        const base = state.resolvedApiBase || 'backend/api';
-        const clean = endpointOrRelative.replace(/^\/+/, '');
-        if (clean.startsWith('backend/api/') || clean.startsWith('api/')) {
-            return clean;
-        }
-        return `${base}/${clean}`;
-    }
-
-    async function apiRequest(endpointOrRelative, options = {}) {
-        await resolveApiBase();
-        const url = buildEndpointUrl(endpointOrRelative);
-        const activeUser = state.currentAdminUser || readStoredUser();
-        const authHeaders = {};
-        if (activeUser && activeUser.id) {
-            authHeaders['X-User-Id'] = String(activeUser.id);
-        }
-        if (activeUser && activeUser.role) {
-            authHeaders['X-User-Role'] = String(activeUser.role);
-        }
-
-        const res = await fetchWithTimeout(url, {
-            ...options,
-            headers: {
-                'Accept': 'application/json',
-                ...authHeaders,
-                ...(options.headers || {})
-            }
+  els.studentsBody?.addEventListener('click', async (e) => {
+    const resetBtn = e.target.closest('button[data-reset-pw-id]');
+    if (resetBtn) {
+      const id = Number(resetBtn.dataset.resetPwId);
+      const label = resetBtn.dataset.studentName || 'this student';
+      const nextPassword = window.prompt(`Enter a new password (min 6 characters) for ${label}:`);
+      if (!nextPassword) return;
+      resetBtn.disabled = true;
+      try {
+        await api('students.php', {
+          method: 'PUT',
+          body: JSON.stringify({ id, password: nextPassword }),
         });
+        if (els.addStudentStatus) els.addStudentStatus.textContent = `Password updated for ${label}.`;
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        resetBtn.disabled = false;
+      }
+      return;
+    }
 
-        let data = null;
-        const text = await res.text();
-        if (text) {
-            try {
-                data = JSON.parse(text);
-            } catch (_) {
-                data = null;
-            }
+    const delBtn = e.target.closest('button[data-delete-student-id]');
+    if (!delBtn) return;
+    const id = Number(delBtn.dataset.deleteStudentId);
+    const label = delBtn.dataset.studentName || 'this account';
+    if (!window.confirm(`Delete ${label} permanently?`)) return;
+    delBtn.disabled = true;
+    try {
+      await api('students.php', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
+      if (els.addStudentStatus) els.addStudentStatus.textContent = `${label} removed.`;
+      await loadStudents();
+    } catch (err) {
+      await loadStudents();
+      const msg = String(err?.message || '').toLowerCase();
+      if (err?.name === 'AbortError' || msg.includes('abort') || msg.includes('timed out') || err?.status === 404) {
+        if (els.addStudentStatus) {
+          els.addStudentStatus.textContent = `${label} removed.`;
         }
-        return { ok: res.ok, status: res.status, data };
+      } else {
+        alert(err.message);
+      }
+      delBtn.disabled = false;
     }
+  });
 
-    async function apiJson(endpointOrRelative, method = 'GET', body = null) {
-        const opts = { method, headers: {} };
-        if (body !== null && body !== undefined) {
-            opts.headers['Content-Type'] = 'application/json';
-            opts.body = JSON.stringify(body);
-        }
-        return apiRequest(endpointOrRelative, opts);
+  els.refreshStudents?.addEventListener('click', loadStudents);
+  els.studentStatus?.addEventListener('change', loadStudents);
+  els.studentSearch?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loadStudents();
+  });
+
+  els.refreshBookings?.addEventListener('click', loadBookings);
+  els.bookingStatus?.addEventListener('change', loadBookings);
+
+  els.bookingsBody?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-booking-id]');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      await api('bookings.php', {
+        method: 'PUT',
+        body: JSON.stringify({ id: Number(btn.dataset.bookingId), status: btn.dataset.status }),
+      });
+      await loadBookings();
+    } catch (err) {
+      alert(err.message);
+      btn.disabled = false;
     }
+  });
 
-    function getToastContainer() {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.style.cssText =
-                'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px;';
-            document.body.appendChild(container);
-        }
-        return container;
+  els.clubRequestsBody?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-req-id]');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      await api('clubs.php', {
+        method: 'PUT',
+        body: JSON.stringify({ id: Number(btn.dataset.reqId), status: btn.dataset.status }),
+      });
+      await loadClubRequests();
+    } catch (err) {
+      alert(err.message);
+      btn.disabled = false;
     }
+  });
 
-    function showToast(message, type = 'info', duration = 4000) {
-        const container = getToastContainer();
-        const toast = document.createElement('div');
-        const colors = {
-            success: { bg: '#dcfce7', border: '#16a34a', text: '#166534' },
-            error: { bg: '#fee2e2', border: '#dc2626', text: '#991b1b' },
-            warning: { bg: '#fef9c3', border: '#ca8a04', text: '#854d0e' },
-            info: { bg: '#dbeafe', border: '#1d63b8', text: '#1e3a8a' }
-        };
-        const c = colors[type] || colors.info;
-        toast.style.cssText = `
-            background:${c.bg};border-left:4px solid ${c.border};color:${c.text};
-            padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);
-            font-size:0.9rem;font-weight:600;opacity:0;transform:translateX(20px);
-            transition:opacity 0.25s ease, transform 0.25s ease;
-        `;
-        toast.textContent = message;
-        container.appendChild(toast);
-        requestAnimationFrame(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(0)';
-        });
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(20px)';
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
+  els.createClubForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    els.createClubStatus.textContent = 'Saving club...';
+    try {
+      await api('clubs.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: els.clubName.value.trim(),
+          sport: els.clubSport.value.trim(),
+          president: els.clubPresident.value.trim(),
+          description: els.clubDesc.value.trim(),
+        }),
+      });
+      els.createClubForm.reset();
+      els.createClubStatus.textContent = 'Club saved to database.';
+    } catch (err) {
+      els.createClubStatus.textContent = err.message;
     }
+  });
 
-    function openModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
+  els.announcementForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    els.announcementStatus.textContent = 'Publishing...';
+    try {
+      await api('announcements.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: els.announcementTitle.value.trim(),
+          content: els.announcementText.value.trim(),
+        }),
+      });
+      els.announcementForm.reset();
+      els.announcementStatus.textContent = 'Announcement published.';
+      await loadAnnouncements();
+    } catch (err) {
+      els.announcementStatus.textContent = err.message;
     }
+  });
 
-    function closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
+  els.addInventoryForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    els.inventoryStatus.textContent = 'Adding item...';
+    try {
+      await api('inventory.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          item_name: els.invItemName.value.trim(),
+          total_stock: Number(els.invTotalStock.value),
+        }),
+      });
+      els.addInventoryForm.reset();
+      els.inventoryStatus.textContent = 'Inventory item added.';
+      await loadInventory();
+    } catch (err) {
+      els.inventoryStatus.textContent = err.message;
     }
+  });
 
-    function extractSessionUser(data) {
-        if (!data || typeof data !== 'object') return null;
-        if (data.user && typeof data.user === 'object' && data.user.id) return data.user;
-        if (data.data && typeof data.data === 'object') {
-            if (data.data.user && typeof data.data.user === 'object' && data.data.user.id) {
-                return data.data.user;
-            }
-            if (data.data.id) return data.data;
-        }
-        if (data.id) return data;
-        return null;
+  els.inventoryContainer?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.inv-save');
+    if (!btn) return;
+    const row = btn.closest('.inv-row');
+    const id = Number(row?.dataset.invId);
+    const totalStock = Number(row?.querySelector('.inv-total')?.value);
+    const issuedCount = Number(row?.querySelector('.inv-issued')?.value);
+    btn.disabled = true;
+    try {
+      await api('inventory.php', {
+        method: 'PUT',
+        body: JSON.stringify({ id, total_stock: totalStock, issued_count: issuedCount }),
+      });
+      els.inventoryStatus.textContent = 'Inventory updated.';
+      await loadInventory();
+    } catch (err) {
+      els.inventoryStatus.textContent = err.message;
+      btn.disabled = false;
     }
+  });
+}
 
-    async function loadCurrentUser() {
-        const storedUser = readStoredUser();
-        if (storedUser && storedUser.id) {
-            state.currentAdminUser = storedUser;
-        }
-
-        try {
-            const { ok, status, data } = await apiJson(ENDPOINTS.auth, 'GET');
-            const serverUser = extractSessionUser(data);
-
-            if (ok && serverUser && serverUser.id) {
-                state.currentAdminUser = serverUser;
-                writeStoredUser(serverUser);
-            } else if (!state.currentAdminUser || !state.currentAdminUser.id) {
-                console.warn('Auth check did not return an active user:', { ok, status, data });
-                window.location.replace('login.html');
-                return false;
-            }
-        } catch (err) {
-            console.warn('Auth check error:', err);
-            if (!state.currentAdminUser || !state.currentAdminUser.id) {
-                window.location.replace('login.html');
-                return false;
-            }
-        }
-
-        const role = String(state.currentAdminUser.role || '').toLowerCase();
-        if (role && !ADMIN_ROLES.has(role)) {
-            window.location.replace('student-dashboard.html');
-            return false;
-        }
-
-        renderUserBadge();
-        return true;
-    }
-
-    function renderUserBadge() {
-        const user = state.currentAdminUser;
-        if (!user) return;
-        const badge = document.getElementById('user-badge');
-        if (badge) {
-            const initials = user.avatar_initials || (user.name || 'AD').slice(0, 2).toUpperCase();
-            badge.innerHTML = `
-                <span class="avatar-circle">${escapeHtml(initials)}</span>
-                <div>
-                    <div style="font-weight:700;font-size:0.9rem;">${escapeHtml(user.name || 'Admin')}</div>
-                    <div style="font-size:0.78rem;color:var(--admin-muted);">${escapeHtml(roleLabel(user.role))}</div>
-                </div>
-            `;
-        }
-    }
-
-    async function logout() {
-        try {
-            await apiJson(`${ENDPOINTS.auth}?action=logout`, 'POST', { action: 'logout' });
-        } catch (_) { /* ignore */ }
-        try {
-            sessionStorage.removeItem(SESSION_STORAGE_KEY);
-        } catch (_) { /* ignore */ }
-        window.location.replace('login.html');
-    }
-
-    function switchSection(sectionId) {
-        state.currentSection = sectionId;
-        document.querySelectorAll('.nav-item[data-section]').forEach((btn) => {
-            btn.classList.toggle('active', btn.dataset.section === sectionId);
-        });
-        document.querySelectorAll('.admin-section').forEach((sec) => {
-            if (sec.id === 'section-' + sectionId) {
-                sec.removeAttribute('hidden');
-            } else {
-                sec.setAttribute('hidden', '');
-            }
-        });
-
-        switch (sectionId) {
-            case 'dashboard':
-                loadDashboard();
-                break;
-            case 'students':
-                loadStudents();
-                break;
-            case 'clubs':
-                loadClubs();
-                break;
-            case 'bookings':
-                loadBookings();
-                break;
-            case 'announcements':
-                loadAnnouncements();
-                break;
-            case 'profile':
-                loadProfile();
-                break;
-        }
-    }
-
-    function bindNavigation() {
-        document.querySelectorAll('.nav-item[data-section]').forEach((btn) => {
-            btn.addEventListener('click', () => switchSection(btn.dataset.section));
-        });
-        const signout = document.querySelector('.nav-signout');
-        if (signout) {
-            signout.addEventListener('click', (e) => {
-                e.preventDefault();
-                logout();
-            });
-        }
-    }
-
-    async function loadDashboard() {
-        const grid = document.getElementById('stats-grid');
-        if (!grid) return;
-        grid.innerHTML = '<p class="muted">Loading overview…</p>';
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.dashboard, 'GET');
-            if (!ok || !data || !data.success) {
-                grid.innerHTML = '<p class="muted">Unable to load dashboard stats.</p>';
-                return;
-            }
-            const s = data.data || {};
-            grid.innerHTML = `
-                <div class="card">
-                    <span class="eyebrow">Total Students</span>
-                    <h2>${escapeHtml(s.total_students ?? 0)}</h2>
-                    <p class="muted">Registered student accounts</p>
-                </div>
-                <div class="card">
-                    <span class="eyebrow">Active Clubs</span>
-                    <h2>${escapeHtml(s.active_clubs ?? 0)}</h2>
-                    <p class="muted">Approved clubs on campus</p>
-                </div>
-                <div class="card">
-                    <span class="eyebrow">Bookings Today</span>
-                    <h2>${escapeHtml(s.bookings_today ?? 0)}</h2>
-                    <p class="muted">Facility reservations</p>
-                </div>
-                <div class="card">
-                    <span class="eyebrow">Pending Requests</span>
-                    <h2>${escapeHtml(s.pending_requests ?? 0)}</h2>
-                    <p class="muted">Awaiting admin review</p>
-                </div>
-            `;
-        } catch (_) {
-            grid.innerHTML = '<p class="muted">Network error while loading dashboard.</p>';
-        }
-    }
-
-    async function loadStudents() {
-        const tbody = document.getElementById('students-tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Loading students…</td></tr>';
-
-        const { search, status } = state.filters.students;
-        const params = new URLSearchParams();
-        if (search) params.set('search', search);
-        if (status) params.set('status', status);
-        const url = ENDPOINTS.students + (params.toString() ? '?' + params.toString() : '');
-
-        try {
-            const { ok, data } = await apiJson(url, 'GET');
-            if (!ok || !data || !data.success) {
-                tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Unable to load students.</td></tr>';
-                return;
-            }
-            state.students = data.data || [];
-            state.studentsLoaded = true;
-            renderStudentsTable();
-        } catch (_) {
-            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
-        }
-    }
-
-    function isProtectedAccount(row) {
-        const studentId = (row.student_id || '').toString().toUpperCase();
-        const email = (row.email || '').toString().toLowerCase();
-        const isPrimaryAdmin = studentId === 'ADMIN001' || email === 'admin@nsbmsport.ac.lk';
-        const isSelf = state.currentAdminUser && Number(row.id) === Number(state.currentAdminUser.id);
-        return isPrimaryAdmin || isSelf;
-    }
-
-    function renderStudentsTable() {
-        const tbody = document.getElementById('students-tbody');
-        if (!tbody) return;
-
-        if (!state.students.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">No students match your filters.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = state.students.map((row) => {
-            const protected_ = isProtectedAccount(row);
-            const actions = protected_
-                ? '<span class="badge badge-inactive">Protected</span>'
-                : `<button class="btn btn-sm btn-reject" data-action="delete" data-id="${row.id}">Delete</button>
-                   <button class="btn btn-sm btn-approve" data-action="edit" data-id="${row.id}" style="margin-left:6px;">Edit</button>`;
-
-            return `
-                <tr>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span class="avatar-circle">${escapeHtml(row.avatar_initials || 'ST')}</span>
-                            <div>
-                                <div style="font-weight:600;">${escapeHtml(row.name || '')}</div>
-                                <div class="muted" style="font-size:0.8rem;">${escapeHtml(row.student_id || '')}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>${escapeHtml(row.email || '')}</td>
-                    <td>${escapeHtml(row.faculty || '—')}</td>
-                    <td>${escapeHtml(row.batch_number || '—')}</td>
-                    <td>${escapeHtml(roleLabel(row.role))}</td>
-                    <td>${statusBadge(row.is_active)}</td>
-                    <td>${actions}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    function bindStudentsToolbar() {
-        const searchInput = document.getElementById('students-search');
-        const statusSelect = document.getElementById('students-status');
-        const addBtn = document.getElementById('btn-add-student');
-        const form = document.getElementById('student-form');
-
-        if (searchInput) {
-            let timer;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(timer);
-                timer = setTimeout(() => {
-                    state.filters.students.search = searchInput.value.trim();
-                    loadStudents();
-                }, 300);
-            });
-        }
-        if (statusSelect) {
-            statusSelect.addEventListener('change', () => {
-                state.filters.students.status = statusSelect.value;
-                loadStudents();
-            });
-        }
-        if (addBtn) {
-            addBtn.addEventListener('click', () => {
-                resetStudentForm();
-                openModal('student-modal');
-            });
-        }
-        if (form) {
-            form.addEventListener('submit', handleStudentFormSubmit);
-        }
-    }
-
-    function resetStudentForm() {
-        const form = document.getElementById('student-form');
-        if (!form) return;
-        form.reset();
-        const idField = form.querySelector('[name="id"]');
-        if (idField) idField.value = '';
-        const status = document.getElementById('student-form-status');
-        if (status) status.textContent = '';
-        const title = document.getElementById('student-modal-title');
-        if (title) title.textContent = 'Register New Student';
-    }
-
-    async function handleStudentFormSubmit(e) {
-        e.preventDefault();
-        const form = e.target;
-        const status = document.getElementById('student-form-status');
-        if (status) status.textContent = '';
-
-        const formData = new FormData(form);
-        const payload = {
-            id: formData.get('id') ? Number(formData.get('id')) : null,
-            name: (formData.get('name') || '').toString().trim(),
-            student_id: (formData.get('student_id') || '').toString().trim(),
-            email: (formData.get('email') || '').toString().trim(),
-            faculty: (formData.get('faculty') || '').toString().trim(),
-            batch_number: (formData.get('batch_number') || '').toString().trim(),
-            role: (formData.get('role') || 'student').toString(),
-            password: (formData.get('password') || '').toString(),
-            is_active: formData.get('is_active') === 'on' || formData.get('is_active') === '1'
-        };
-
-        if (!payload.name || !payload.student_id || !payload.email) {
-            if (status) status.textContent = 'Name, student number, and email are required.';
-            return;
-        }
-        if (!payload.id && !payload.password) {
-            if (status) status.textContent = 'Password is required for new students.';
-            return;
-        }
-
-        const method = payload.id ? 'PUT' : 'POST';
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.disabled = true;
-        if (status) status.textContent = 'Saving…';
-
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.students, method, payload);
-            if (ok && data && data.success) {
-                showToast(payload.id ? 'Student updated.' : 'Student registered.', 'success');
-                closeModal('student-modal');
-                await loadStudents();
-            } else {
-                const msg = (data && (data.message || data.error)) || 'Unable to save student.';
-                if (status) status.textContent = msg;
-                showToast(msg, 'error');
-            }
-        } catch (err) {
-            const msg = err.isTimeout ? 'Request timed out. Please try again.' : 'Network error.';
-            if (status) status.textContent = msg;
-            showToast(msg, 'error');
-        } finally {
-            if (submitBtn) submitBtn.disabled = false;
-        }
-    }
-
-    async function openEditStudentModal(id) {
-        const row = state.students.find((s) => s.id === id);
-        if (!row) return;
-        const form = document.getElementById('student-form');
-        if (!form) return;
-        form.reset();
-        const setVal = (name, val) => {
-            const el = form.querySelector(`[name="${name}"]`);
-            if (el) el.value = val ?? '';
-        };
-        setVal('id', row.id);
-        setVal('name', row.name);
-        setVal('student_id', row.student_id);
-        setVal('email', row.email);
-        setVal('faculty', row.faculty);
-        setVal('batch_number', row.batch_number);
-        setVal('role', row.role);
-        const active = form.querySelector('[name="is_active"]');
-        if (active) active.checked = !!row.is_active;
-        const title = document.getElementById('student-modal-title');
-        if (title) title.textContent = 'Edit Student';
-        openModal('student-modal');
-    }
-
-    async function deleteStudent(id) {
-        if (!confirm('Are you sure you want to delete this user? This will also remove their club memberships, bookings, and announcements.')) {
-            return;
-        }
-
-        const btn = document.querySelector(`[data-action="delete"][data-id="${id}"]`);
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Deleting…';
-        }
-
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.students, 'DELETE', { id });
-
-            if (ok && data && data.success) {
-                showToast('User and related records deleted successfully.', 'success');
-                await loadStudents();
-                return;
-            }
-
-            if (data && (data.message || data.error)) {
-                showToast(data.message || data.error || 'Failed to delete user.', 'error');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'Delete';
-                }
-                return;
-            }
-
-            showToast('Checking deletion status…', 'info', 2000);
-            await loadStudents();
-
-            const stillPresent = state.students.some((s) => s.id === id);
-            if (stillPresent) {
-                showToast('Deletion could not be confirmed. Please try again.', 'error');
-            } else {
-                showToast('User deleted successfully.', 'success');
-            }
-        } catch (err) {
-            console.error('Delete error:', err);
-            try {
-                await loadStudents();
-                const stillPresent = state.students.some((s) => s.id === id);
-                if (!stillPresent) {
-                    showToast('User deleted successfully.', 'success');
-                    return;
-                }
-            } catch (_) { /* ignore */ }
-            showToast(err.isTimeout
-                ? 'The request timed out. Please refresh and check if the user was deleted.'
-                : 'A network error occurred. Please try again.', 'error');
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Delete';
-            }
-        }
-    }
-
-    function bindStudentsTableEvents() {
-        const tbody = document.getElementById('students-tbody');
-        if (!tbody) return;
-        tbody.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button[data-action]');
-            if (!btn) return;
-            const id = Number(btn.dataset.id);
-            if (!id) return;
-            if (btn.dataset.action === 'delete') {
-                await deleteStudent(id);
-            } else if (btn.dataset.action === 'edit') {
-                await openEditStudentModal(id);
-            }
-        });
-    }
-
-    async function loadClubs() {
-        const tbody = document.getElementById('clubs-tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Loading clubs…</td></tr>';
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.clubs, 'GET');
-            if (!ok || !data || !data.success) {
-                tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Unable to load clubs.</td></tr>';
-                return;
-            }
-            state.clubs = data.data || [];
-            renderClubsTable();
-        } catch (_) {
-            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
-        }
-    }
-
-    function renderClubsTable() {
-        const tbody = document.getElementById('clubs-tbody');
-        if (!tbody) return;
-        if (!state.clubs.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">No clubs found.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = state.clubs.map((c) => {
-            let statusBadgeHtml = '';
-            if (c.status === 'approved') statusBadgeHtml = '<span class="badge badge-approved">Approved</span>';
-            else if (c.status === 'pending') statusBadgeHtml = '<span class="badge badge-pending">Pending</span>';
-            else statusBadgeHtml = '<span class="badge badge-rejected">Rejected</span>';
-
-            const actions = c.status === 'pending'
-                ? `<button class="btn btn-sm btn-approve" data-action="approve-club" data-id="${c.id}">Approve</button>
-                   <button class="btn btn-sm btn-reject" data-action="reject-club" data-id="${c.id}" style="margin-left:6px;">Reject</button>`
-                : '—';
-
-            return `
-                <tr>
-                    <td style="font-weight:600;">${escapeHtml(c.name || '')}</td>
-                    <td>${escapeHtml(c.category || '—')}</td>
-                    <td>${escapeHtml(c.manager_name || '—')}</td>
-                    <td>${escapeHtml(formatDate(c.created_at))}</td>
-                    <td>${statusBadgeHtml}</td>
-                    <td>${actions}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function handleClubAction(id, action) {
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.clubs, 'PUT', {
-                id,
-                status: action === 'approve-club' ? 'approved' : 'rejected'
-            });
-            if (ok && data && data.success) {
-                showToast('Club ' + (action === 'approve-club' ? 'approved' : 'rejected') + '.', 'success');
-                await loadClubs();
-            } else {
-                showToast((data && data.message) || 'Unable to update club.', 'error');
-            }
-        } catch (_) {
-            showToast('Network error.', 'error');
-        }
-    }
-
-    function bindClubsTableEvents() {
-        const tbody = document.getElementById('clubs-tbody');
-        if (!tbody) return;
-        tbody.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button[data-action]');
-            if (!btn) return;
-            const id = Number(btn.dataset.id);
-            if (!id) return;
-            await handleClubAction(id, btn.dataset.action);
-        });
-    }
-
-    async function loadBookings() {
-        const tbody = document.getElementById('bookings-tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Loading bookings…</td></tr>';
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.bookings, 'GET');
-            if (!ok || !data || !data.success) {
-                tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Unable to load bookings.</td></tr>';
-                return;
-            }
-            state.bookings = data.data || [];
-            renderBookingsTable();
-        } catch (_) {
-            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Network error.</td></tr>';
-        }
-    }
-
-    function renderBookingsTable() {
-        const tbody = document.getElementById('bookings-tbody');
-        if (!tbody) return;
-        if (!state.bookings.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">No bookings found.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = state.bookings.map((b) => {
-            let badgeHtml = '';
-            if (b.status === 'confirmed') badgeHtml = '<span class="badge badge-confirmed">Confirmed</span>';
-            else if (b.status === 'pending') badgeHtml = '<span class="badge badge-pending">Pending</span>';
-            else if (b.status === 'cancelled') badgeHtml = '<span class="badge badge-cancelled">Cancelled</span>';
-            else badgeHtml = '<span class="badge">' + escapeHtml(b.status || '—') + '</span>';
-
-            return `
-                <tr>
-                    <td>${escapeHtml(b.facility || '—')}</td>
-                    <td>${escapeHtml(b.booked_by_name || '—')}</td>
-                    <td>${escapeHtml(formatDateTime(b.start_time))}</td>
-                    <td>${escapeHtml(formatDateTime(b.end_time))}</td>
-                    <td>${escapeHtml(b.purpose || '—')}</td>
-                    <td>${badgeHtml}</td>
-                    <td>${escapeHtml(formatDate(b.created_at))}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function loadAnnouncements() {
-        const list = document.getElementById('announcements-list');
-        if (!list) return;
-        list.innerHTML = '<p class="muted">Loading announcements…</p>';
-        try {
-            const { ok, data } = await apiJson(ENDPOINTS.announcements, 'GET');
-            if (!ok || !data || !data.success) {
-                list.innerHTML = '<p class="muted">Unable to load announcements.</p>';
-                return;
-            }
-            state.announcements = data.data || [];
-            renderAnnouncements();
-        } catch (_) {
-            list.innerHTML = '<p class="muted">Network error.</p>';
-        }
-    }
-
-    function renderAnnouncements() {
-        const list = document.getElementById('announcements-list');
-        if (!list) return;
-        if (!state.announcements.length) {
-            list.innerHTML = '<p class="muted">No announcements yet.</p>';
-            return;
-        }
-        list.innerHTML = state.announcements.map((a) => `
-            <div class="feed-item">
-                <div style="display:flex;justify-content:space-between;gap:12px;">
-                    <strong>${escapeHtml(a.title || '')}</strong>
-                    <span class="muted" style="font-size:0.8rem;">${escapeHtml(formatDateTime(a.created_at))}</span>
-                </div>
-                <p>${escapeHtml(a.body || '')}</p>
-                <div class="muted" style="font-size:0.8rem;">By ${escapeHtml(a.author_name || 'Admin')}</div>
-            </div>
-        `).join('');
-    }
-
-    async function loadProfile() {
-        const form = document.getElementById('profile-form');
-        if (!form || !state.currentAdminUser) return;
-        const setVal = (name, val) => {
-            const el = form.querySelector(`[name="${name}"]`);
-            if (el) el.value = val ?? '';
-        };
-        setVal('name', state.currentAdminUser.name);
-        setVal('email', state.currentAdminUser.email);
-    }
-
-    function bindProfileForm() {
-        const form = document.getElementById('profile-form');
-        if (!form) return;
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const status = document.getElementById('profile-form-status');
-            if (status) status.textContent = '';
-            const formData = new FormData(form);
-            const payload = {
-                name: (formData.get('name') || '').toString().trim(),
-                password: (formData.get('password') || '').toString()
-            };
-            try {
-                const { ok, data } = await apiJson(ENDPOINTS.profile, 'PUT', payload);
-                if (ok && data && data.success) {
-                    showToast('Profile updated.', 'success');
-                    await loadCurrentUser();
-                } else {
-                    showToast((data && data.message) || 'Unable to update profile.', 'error');
-                }
-            } catch (_) {
-                showToast('Network error.', 'error');
-            }
-        });
-    }
-
-    function bindModalCloseHandlers() {
-        document.querySelectorAll('[data-close-modal]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const target = btn.dataset.closeModal;
-                if (target) closeModal(target);
-            });
-        });
-        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
-            backdrop.addEventListener('click', (e) => {
-                if (e.target === backdrop) {
-                    const modal = backdrop.closest('[id]');
-                    if (modal) closeModal(modal.id);
-                }
-            });
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('[id$="-modal"]').forEach((m) => {
-                    if (m.style.display === 'flex') closeModal(m.id);
-                });
-            }
-        });
-    }
-
-    async function init() {
-        bindNavigation();
-        bindStudentsToolbar();
-        bindStudentsTableEvents();
-        bindClubsTableEvents();
-        bindProfileForm();
-        bindModalCloseHandlers();
-
-        const authenticated = await loadCurrentUser();
-        if (!authenticated) return;
-
-        switchSection(state.currentSection || 'dashboard');
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+(async function init() {
+  bindEvents();
+  const user = await ensureAdminSession();
+  if (!user) return;
+  await Promise.allSettled([
+    loadStudents(),
+    loadBookings(),
+    loadClubRequests(),
+    loadAnnouncements(),
+    loadInventory(),
+  ]);
 })();
