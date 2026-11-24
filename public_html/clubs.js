@@ -10,6 +10,27 @@
       upcomingFixtures: `${API_BASE}/tournaments/upcoming`,
     };
 
+    function getHtmlClubImages() {
+      const tpl = document.getElementById("club-images");
+      const map = new Map();
+      if (!tpl) return map;
+
+      tpl.content.querySelectorAll("img[data-slug]").forEach((img) => {
+        const slug = img.dataset.slug?.trim();
+        const src = img.getAttribute("src")?.trim();
+        if (slug && src) {
+          map.set(slug, src);
+        }
+      });
+      return map;
+    }
+
+    const HTML_CLUB_IMAGES = getHtmlClubImages();
+
+    function resolveClubImage(slug, apiImage = "") {
+      return HTML_CLUB_IMAGES.get(slug) || apiImage || "";
+    }
+
     const FALLBACK_CLUBS = [
       {
         slug: "nsbm-athletics-club",
@@ -21,7 +42,6 @@
         membersCount: 84,
         lead: "Athletics Captain · Sports Council",
         summary: "Sprint, middle-distance, relay, and field event training for university track meets and inter-university championships.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/4-768x512.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/nsbm-athletics-club/",
       },
       {
@@ -34,7 +54,6 @@
         membersCount: 68,
         lead: "Badminton Captain · Sports Council",
         summary: "Singles and doubles drills, footwork conditioning, and selection trials for inter-faculty and SLUG badminton tournaments.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/badminton-club-768x215.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/nsbm-badminton-club/",
       },
       {
@@ -47,7 +66,6 @@
         membersCount: 52,
         lead: "Chess President · Sports Council",
         summary: "Rapid and classical over-the-board sessions, opening prep, and inter-university chess squad selection.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/07/chess-club-768x512.jpg",
         officialUrl: "https://www.nsbm.ac.lk/club/chess-club/",
       },
       {
@@ -60,7 +78,6 @@
         membersCount: 96,
         lead: "Cricket Captain · Sports Council",
         summary: "Net practice, fielding drills, and squad matches across hard-ball and university tournament formats.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/08/cricket-768x214.jpg",
         officialUrl: "https://www.nsbm.ac.lk/club/cricket-club/",
       },
       {
@@ -73,7 +90,6 @@
         membersCount: 61,
         lead: "Martial Arts Lead · Sports Council",
         summary: "Structured technique, pattern/form discipline, sparring conditioning, and grading preparation for beginners and experienced practitioners.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/taekwondo7-768x626.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/nsbm-martial-arts-club/",
       },
       {
@@ -86,7 +102,6 @@
         membersCount: 57,
         lead: "Netball Captain · Sports Council",
         summary: "Tactical court play, shooting accuracy, agility work, and inter-university netball fixtures.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/4-jpg.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/nsbm-netball-club/",
       },
       {
@@ -99,7 +114,6 @@
         membersCount: 73,
         lead: "Rugby Captain · Sports Council",
         summary: "Contact and sevens rugby conditioning, set-piece execution, and inter-university tournament preparation.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/rugby4-768x512.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/nsbm-rugby-club/",
       },
       {
@@ -112,7 +126,6 @@
         membersCount: 49,
         lead: "Swimming Captain · Sports Council",
         summary: "Stroke mechanics, endurance sets, and time trials for freestyle, backstroke, breaststroke, and butterfly swimmers.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/08/swimming-club-768x512.jpeg",
         officialUrl: "https://www.nsbm.ac.lk/club/swimming-club/",
       },
       {
@@ -125,7 +138,6 @@
         membersCount: 44,
         lead: "Table Tennis Lead · Sports Council",
         summary: "Spin control, rally consistency, ladder matches, and inter-faculty table tennis tournaments.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/7-768x432.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/table-tennis-club/",
       },
       {
@@ -138,7 +150,6 @@
         membersCount: 38,
         lead: "Tennis Captain · Sports Council",
         summary: "Groundstroke consistency, serve drills, and singles/doubles match play across all skill tiers.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/tennis-768x511.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/tennis-club/",
       },
       {
@@ -151,7 +162,6 @@
         membersCount: 66,
         lead: "Volleyball Captain · Sports Council",
         summary: "Passing, setting, spiking, rotation drills, and inter-university volleyball squad training.",
-        image: "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/vb2-768x512.webp",
         officialUrl: "https://www.nsbm.ac.lk/club/nsbm-volleyball-club/",
       },
     ];
@@ -177,7 +187,6 @@
       },
     ];
 
-    // DOM References
     const gridEl = document.getElementById("clubs-grid");
     const emptyEl = document.getElementById("clubs-empty");
     const searchInput = document.getElementById("club-search-input");
@@ -189,7 +198,6 @@
     const fixturesListEl = document.getElementById("upcoming-fixtures-list");
     const refreshFixturesBtn = document.getElementById("refresh-fixtures-btn");
 
-    // Modal & Form References
     const modalEl = document.getElementById("club-modal");
     const closeModalBtn = document.getElementById("close-modal-btn");
     const detailViewEl = document.getElementById("modal-detail-view");
@@ -248,22 +256,22 @@
         throw new Error("Invalid clubs payload");
       }
 
-      return rawList.map((club, index) => ({
-        slug: club.slug || `club-${index + 1}`,
-        name: club.name || club.club_name || "Sports Club",
-        category: club.category || "field",
-        categoryLabel: club.category_label || club.categoryLabel || "Sports Club",
-        venue: club.venue || club.location || "NSBM Sports Facilities",
-        schedule: club.schedule || club.training_schedule || "Weekly Campus Sessions",
-        membersCount: club.members_count ?? club.membersCount ?? "Active",
-        lead: club.lead || club.captain || "NSBM Sports Council",
-        summary: club.summary || club.description || "Official NSBM student sports club.",
-        image:
-          club.image ||
-          club.image_url ||
-          "https://d3c539pel8wzjz.cloudfront.net/wp-content/uploads/2023/clubs/sports/4-768x512.webp",
-        officialUrl: club.official_url || club.officialUrl || "https://www.nsbm.ac.lk/sports-clubs/",
-      }));
+      return rawList.map((club, index) => {
+        const slug = club.slug || `club-${index + 1}`;
+        return {
+          slug,
+          name: club.name || club.club_name || "Sports Club",
+          category: club.category || "field",
+          categoryLabel: club.category_label || club.categoryLabel || "Sports Club",
+          venue: club.venue || club.location || "NSBM Sports Facilities",
+          schedule: club.schedule || club.training_schedule || "Weekly Campus Sessions",
+          membersCount: club.members_count ?? club.membersCount ?? "Active",
+          lead: club.lead || club.captain || "NSBM Sports Council",
+          summary: club.summary || club.description || "Official NSBM student sports club.",
+          image: resolveClubImage(slug, club.image || club.image_url),
+          officialUrl: club.official_url || club.officialUrl || "https://www.nsbm.ac.lk/sports-clubs/",
+        };
+      });
     }
 
     async function loadClubs() {
@@ -273,7 +281,10 @@
         state.clubs = normalizeClubs(data);
         setSyncStatus("Live · /api/clubs", false);
       } catch (_err) {
-        state.clubs = FALLBACK_CLUBS;
+        state.clubs = FALLBACK_CLUBS.map((club) => ({
+          ...club,
+          image: resolveClubImage(club.slug),
+        }));
         setSyncStatus("Preview · Local Data", true);
       } finally {
         gridEl?.setAttribute("aria-busy", "false");
@@ -324,7 +335,11 @@
           (club) => `
           <li class="ab-clubcard">
             <div>
-              <img src="${escapeHtml(club.image)}" alt="${escapeHtml(club.name)}" loading="lazy" decoding="async">
+              ${
+                club.image
+                  ? `<img src="${escapeHtml(club.image)}" alt="${escapeHtml(club.name)}" decoding="async">`
+                  : ""
+              }
               <span class="badge badge-success" style="margin-bottom: 6px;">${escapeHtml(club.categoryLabel)}</span>
               <h3>${escapeHtml(club.name)}</h3>
               <p style="margin-bottom: 8px;">${escapeHtml(club.summary)}</p>
@@ -512,7 +527,6 @@
       }
     }
 
-    // Event Listeners
     gridEl?.addEventListener("click", (event) => {
       const trigger = event.target.closest("[data-club-slug]");
       if (!trigger) return;
