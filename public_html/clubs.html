@@ -10,7 +10,7 @@
 </head>
 <body data-require="student">
   <div class="app-shell">
-    <!-- Sidebar (Exact match to student-dashboard.html) -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <a href="student-dashboard.html" class="brand" aria-label="NSBM SportsHub" style="text-decoration:none;">
         <svg class="brand-mark" viewBox="34 14 407 444" width="32" height="32" aria-hidden="true" focusable="false">
@@ -177,7 +177,7 @@
 
         <div class="sh-field">
           <label for="join-student-name">Full Name</label>
-          <input type="text" id="join-student-name" name="student_name" required placeholder="e.g., Chanupa Bandarage">
+          <input type="text" id="join-student-name" name="student_name" required placeholder="e.g., Saman Kumara">
         </div>
 
         <div class="sh-field-row">
@@ -215,6 +215,21 @@
       </form>
     </div>
   </div>
+
+  <!-- Add, edit, or remove club images directly by data-slug -->
+  <template id="club-images">
+    <img data-slug="nsbm-athletics-club" src="./assets/pictures/Athletic.jpg" alt="Athletics Club">
+    <img data-slug="nsbm-badminton-club" src="./assets/pictures/Badminton.jpg" alt="Badminton Club">
+    <img data-slug="chess-club" src="./assets/pictures/Chess.jpg" alt="Chess Club">
+    <img data-slug="cricket-club" src="./assets/pictures/Cricket.jpg" alt="Cricket Club">
+    <img data-slug="nsbm-martial-arts-club" src="./assets/pictures/Taekwondo.jpg" alt="Martial Arts Club">
+    <img data-slug="nsbm-netball-club" src="./assets/pictures/Netball.jpg" alt="Netball Club">
+    <img data-slug="nsbm-rugby-club" src="./assets/pictures/Rugby.jpg" alt="Rugby Club">
+    <img data-slug="swimming-club" src="./assets/pictures/Swimming Pool.jpg" alt="Swimming Club">
+    <img data-slug="table-tennis-club" src="./assets/pictures/Table Tennis.jpg" alt="Table Tennis Club">
+    <img data-slug="tennis-club" src="./assets/pictures/Indoor Court.jpg" alt="Tennis Club">
+    <img data-slug="nsbm-volleyball-club" src="./assets/pictures/Indoor Court.jpg" alt="Volleyball Club">
+  </template>
 
   <script type="module" src="services/guard.js"></script>
   <script src="clubs.js" defer></script>
