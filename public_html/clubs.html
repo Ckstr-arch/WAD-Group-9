@@ -1,907 +1,222 @@
-:root {
-  --nsbm-navy: #002147;
-  --nsbm-navy-deep: #00172f;
-  --nsbm-accent: #16a34a;
-  --nsbm-accent-dark: #15803d;
-  --nsbm-mint: #70d8a0;
-  --nsbm-bg: #f6f8fb;
-  --nsbm-surface: #ffffff;
-  --nsbm-text: #0f172a;
-  --nsbm-muted: #475569;
-  --nsbm-border: #e2e8f0;
-  --nsbm-radius: 14px;
-  --nsbm-shadow: 0 10px 30px rgba(0, 23, 47, 0.08);
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: var(--nsbm-text);
-  background: var(--nsbm-bg);
-  line-height: 1.6;
-}
-
-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-a {
-  color: inherit;
-}
-
-.screen-reader-text {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.skip-link:focus {
-  position: fixed;
-  top: 8px;
-  left: 8px;
-  z-index: 10000;
-  padding: 10px 16px;
-  border-radius: 8px;
-  background: var(--nsbm-navy-deep);
-  color: #ffffff;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-/* Header & Utility Bar */
-.utility {
-  background: var(--mm-top, #00172f);
-  color: var(--mm-on-top, #ffffff);
-  font-size: 13px;
-}
-
-.utility .container,
-.site-header-bar .container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.utility .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 38px;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.utility ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.utility a {
-  text-decoration: none;
-  opacity: 0.9;
-}
-
-.utility a:hover {
-  opacity: 1;
-  color: var(--mm-top-accent, #70d8a0);
-}
-
-.site-header-bar {
-  background: var(--nsbm-navy);
-  padding: 12px 0;
-  position: sticky;
-  top: 0;
-  z-index: 900;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
-}
-
-.glass-bar {
-  background: var(--mm-bar, #ffffff);
-  color: var(--mm-on-bar, #002147);
-  border-radius: 12px;
-  padding: 8px 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.brand img {
-  height: 46px;
-  width: auto;
-  object-fit: contain;
-}
-
-.main-nav ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.main-nav .nav-link {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--nsbm-navy);
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.main-nav .nav-link:hover,
-.main-nav .nav-item.is-current .nav-link {
-  background: rgba(0, 33, 71, 0.08);
-  color: var(--nsbm-accent-dark);
-}
-
-.btn {
-  border: 0;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 700;
-  border-radius: 9px;
-  transition: transform 0.15s ease, background-color 0.2s ease;
-}
-
-.btn--small {
-  padding: 10px 16px;
-  font-size: 14px;
-  background: var(--nsbm-accent);
-  color: #ffffff;
-}
-
-.btn--small:hover {
-  background: var(--nsbm-accent-dark);
-  transform: translateY(-1px);
-}
-
-/* Shared Layout Container */
-.ab-wrap {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-/* Hero & Photo Mosaic */
-.ab-hero {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, #00172f 0%, #002b5c 62%, #064e3b 100%);
-  color: #ffffff;
-  padding: 56px 0 64px;
-}
-
-.ab-hero__fx span {
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-  filter: blur(60px);
-  opacity: 0.28;
-}
-
-.ab-hero__fx span:first-child {
-  width: 340px;
-  height: 340px;
-  background: #22c55e;
-  top: -80px;
-  right: 8%;
-}
-
-.ab-hero__fx span:last-child {
-  width: 260px;
-  height: 260px;
-  background: #38bdf8;
-  bottom: -90px;
-  left: 12%;
-}
-
-.ab-hero__grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 36px;
-  align-items: center;
-}
-
-.ab-crumbs ol {
-  list-style: none;
-  margin: 0 0 14px;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.ab-crumbs li + li::before {
-  content: "/";
-  margin-right: 8px;
-  opacity: 0.6;
-}
-
-.ab-kicker {
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--nsbm-mint);
-  margin: 0 0 10px;
-}
-
-.ab-kicker--dark {
-  color: var(--nsbm-accent-dark);
-}
-
-.ab-hero h1 {
-  margin: 0 0 16px;
-  font-size: clamp(2.4rem, 5vw, 4.2rem);
-  line-height: 1.05;
-  font-weight: 800;
-}
-
-.ab-hero h1 span {
-  color: var(--nsbm-mint);
-}
-
-.ab-hero__lead {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.65;
-  color: rgba(255, 255, 255, 0.9);
-  max-width: 62ch;
-}
-
-.ab-mosaic {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.ab-mosaic__item {
-  border-radius: 12px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.16);
-  aspect-ratio: 16 / 10;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.ab-mosaic__item:first-child {
-  grid-column: span 2;
-  aspect-ratio: 16 / 8;
-}
-
-.ab-mosaic__item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.ab-mosaic__count {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  background: var(--nsbm-navy-deep);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  box-shadow: var(--nsbm-shadow);
-}
-
-/* Subnav */
-.ab-subnav {
-  background: #ffffff;
-  border-bottom: 1px solid var(--nsbm-border);
-}
-
-.ab-subnav ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-}
-
-.ab-subnav a {
-  display: block;
-  padding: 14px 16px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--nsbm-muted);
-  border-bottom: 3px solid transparent;
-  white-space: nowrap;
-}
-
-.ab-subnav a:hover,
-.ab-subnav a[aria-current="page"] {
-  color: var(--nsbm-navy);
-  border-bottom-color: var(--nsbm-accent);
-}
-
-/* Clubs Section & Header */
-.ab-sec {
-  padding: 64px 0;
-}
-
-.ab-clubs__head {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-  align-items: end;
-  margin-bottom: 32px;
-}
-
-.ab-prose p {
-  margin: 0;
-  font-size: 17px;
-  color: var(--nsbm-muted);
-}
-
-.ab-clubs__head h2 {
-  margin: 0;
-  font-size: clamp(1.65rem, 3vw, 2.25rem);
-  line-height: 1.2;
-  color: var(--nsbm-navy);
-}
-
-.ab-clubs__head h2 span {
-  color: var(--nsbm-accent-dark);
-}
-
-/* Toolbar: Search, Category Chips, Sync Pill */
-.sh-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  background: var(--nsbm-surface);
-  border: 1px solid var(--nsbm-border);
-  border-radius: var(--nsbm-radius);
-  padding: 14px 16px;
-  margin-bottom: 28px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-}
-
-.sh-search-wrap {
-  flex: 1 1 240px;
-}
-
-.sh-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--nsbm-border);
-  border-radius: 9px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--nsbm-text);
-  background: #f8fafc;
-}
-
-.sh-input:focus {
-  outline: 2px solid var(--nsbm-accent);
-  outline-offset: 1px;
-  background: #ffffff;
-}
-
-.sh-filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.sh-chip {
-  border: 1px solid var(--nsbm-border);
-  background: #ffffff;
-  color: var(--nsbm-navy);
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.sh-chip:hover {
-  border-color: var(--nsbm-accent);
-}
-
-.sh-chip.is-active {
-  background: var(--nsbm-navy);
-  color: #ffffff;
-  border-color: var(--nsbm-navy);
-}
-
-.sh-status-pill {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: var(--nsbm-accent-dark);
-  border: 1px solid #bbf7d0;
-}
-
-/* Club Cards Grid */
-.ab-clubgrid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-}
-
-.ab-clubcard {
-  background: var(--nsbm-surface);
-  border: 1px solid var(--nsbm-border);
-  border-radius: var(--nsbm-radius);
-  overflow: hidden;
-  box-shadow: var(--nsbm-shadow);
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.ab-clubcard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 34px rgba(0, 23, 47, 0.13);
-}
-
-.ab-clubcard__trigger {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  text-align: left;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.ab-clubcard__media {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  background: #e2e8f0;
-}
-
-.ab-clubcard__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.35s ease;
-}
-
-.ab-clubcard:hover .ab-clubcard__media img {
-  transform: scale(1.04);
-}
-
-.ab-clubcard__body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-}
-
-.ab-clubcard__tag {
-  align-self: flex-start;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--nsbm-accent-dark);
-  background: #f0fdf4;
-  padding: 4px 9px;
-  border-radius: 6px;
-}
-
-.ab-clubcard__name {
-  margin: 0;
-  font-size: 21px;
-  font-weight: 800;
-  color: var(--nsbm-navy);
-}
-
-.ab-clubcard__meta {
-  font-size: 13px;
-  color: var(--nsbm-muted);
-}
-
-.ab-clubcard__more {
-  margin-top: auto;
-  padding-top: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--nsbm-accent-dark);
-}
-
-/* Upcoming Fixtures Section */
-.sh-fixtures {
-  background: #ffffff;
-  border-top: 1px solid var(--nsbm-border);
-}
-
-.sh-fixtures__top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-.sh-fixtures__top h2 {
-  margin: 0;
-  font-size: 28px;
-  color: var(--nsbm-navy);
-}
-
-.sh-btn-secondary {
-  border: 1px solid var(--nsbm-navy);
-  background: #ffffff;
-  color: var(--nsbm-navy);
-  padding: 9px 15px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.sh-btn-secondary:hover {
-  background: var(--nsbm-navy);
-  color: #ffffff;
-}
-
-.sh-fixtures__list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.sh-fixture-card {
-  border: 1px solid var(--nsbm-border);
-  border-radius: 12px;
-  padding: 18px;
-  background: #f8fafc;
-}
-
-.sh-fixture-card__date {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--nsbm-accent-dark);
-  text-transform: uppercase;
-}
-
-.sh-fixture-card__title {
-  margin: 6px 0;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--nsbm-navy);
-}
-
-.sh-fixture-card__venue {
-  margin: 0;
-  font-size: 14px;
-  color: var(--nsbm-muted);
-}
-
-.sh-empty {
-  text-align: center;
-  padding: 40px 20px;
-  background: #ffffff;
-  border-radius: var(--nsbm-radius);
-  border: 1px dashed #cbd5e1;
-}
-
-/* Footer & CTA Card */
-.site-footer {
-  background: var(--nsbm-navy-deep);
-  color: #ffffff;
-  padding: 48px 0 24px;
-}
-
-.foot-cta {
-  background: linear-gradient(120deg, #002147 0%, #065f46 100%);
-  border-radius: 18px;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 1fr 1.1fr;
-  margin-bottom: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.foot-cta__media {
-  width: 100%;
-  height: 100%;
-  min-height: 260px;
-  object-fit: cover;
-}
-
-.foot-cta__body {
-  padding: 36px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14px;
-}
-
-.foot-cta__title {
-  margin: 0;
-  font-size: clamp(1.6rem, 3vw, 2.3rem);
-  line-height: 1.15;
-}
-
-.foot-cta__text {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.foot-cta__actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 6px 0 0;
-}
-
-.foot-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 11px 18px;
-  border-radius: 9px;
-  font-weight: 700;
-  font-size: 14px;
-  text-decoration: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.foot-btn--primary {
-  background: #22c55e;
-  color: #052e16;
-}
-
-.foot-btn--primary:hover {
-  background: #4ade80;
-}
-
-.foot-btn--ghost {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.foot-panel {
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 32px;
-}
-
-.foot-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 32px;
-  flex-wrap: wrap;
-}
-
-.foot-cols {
-  display: flex;
-  gap: 48px;
-  flex-wrap: wrap;
-}
-
-.foot-col__title {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--nsbm-mint);
-  margin: 0 0 12px;
-}
-
-.foot-col ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.foot-col a {
-  text-decoration: none;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
-}
-
-.foot-col a:hover {
-  color: #ffffff;
-  text-decoration: underline;
-}
-
-.foot-bottom {
-  margin-top: 28px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* Modal */
-.sh-modal[hidden] {
-  display: none;
-}
-
-.sh-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-}
-
-.sh-modal__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 6, 23, 0.65);
-  backdrop-filter: blur(3px);
-}
-
-.sh-modal__dialog {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 580px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: #ffffff;
-  color: var(--nsbm-text);
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-}
-
-.sh-modal__close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--nsbm-border);
-  background: #f8fafc;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.sh-meta-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  background: #f8fafc;
-  border: 1px solid var(--nsbm-border);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 18px 0 22px;
-}
-
-.sh-meta-list dt {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--nsbm-muted);
-}
-
-.sh-meta-list dd {
-  margin: 4px 0 0;
-  font-weight: 600;
-  color: var(--nsbm-navy);
-}
-
-.sh-modal__actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.sh-form {
-  display: grid;
-  gap: 14px;
-}
-
-.sh-field {
-  display: grid;
-  gap: 6px;
-}
-
-.sh-field label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--nsbm-navy);
-}
-
-.sh-field input,
-.sh-field select,
-.sh-field textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 14px;
-}
-
-.sh-field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.sh-form-feedback {
-  font-size: 14px;
-  font-weight: 600;
-  min-height: 20px;
-}
-
-.sh-form-feedback.is-success {
-  color: var(--nsbm-accent-dark);
-}
-
-.sh-form-feedback.is-error {
-  color: #b91c1c;
-}
-
-@media (max-width: 960px) {
-  .ab-hero__grid,
-  .ab-clubs__head,
-  .foot-cta {
-    grid-template-columns: 1fr;
-  }
-
-  .ab-clubgrid,
-  .sh-fixtures__list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .ab-clubgrid,
-  .sh-fixtures__list,
-  .sh-meta-list,
-  .sh-field-row {
-    grid-template-columns: 1fr;
-  }
-}
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sports Clubs · NSBM SportsHub</title>
+  <meta name="description" content="Explore NSBM Sports Clubs, check schedules and upcoming fixtures, and register for clubs through NSBM SportsHub.">
+  <link rel="stylesheet" href="student-dashboard.css">
+  <link rel="stylesheet" href="clubs.css">
+</head>
+<body data-require="student">
+  <div class="app-shell">
+    <!-- Sidebar (Exact match to student-dashboard.html) -->
+    <aside class="sidebar">
+      <a href="student-dashboard.html" class="brand" aria-label="NSBM SportsHub" style="text-decoration:none;">
+        <svg class="brand-mark" viewBox="34 14 407 444" width="32" height="32" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="brand-blue" x1="40" y1="130" x2="360" y2="360" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#2463a1"/>
+              <stop offset="1" stop-color="#18558e"/>
+            </linearGradient>
+            <linearGradient id="brand-blue-top" x1="240" y1="20" x2="414" y2="133" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#205e9b"/>
+              <stop offset="1" stop-color="#245e96"/>
+            </linearGradient>
+            <linearGradient id="brand-green" x1="239" y1="180" x2="435" y2="280" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#39b143"/>
+              <stop offset="1" stop-color="#32a942"/>
+            </linearGradient>
+            <linearGradient id="brand-lime" x1="40" y1="200" x2="286" y2="380" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#8fc640"/>
+              <stop offset="1" stop-color="#88c440"/>
+            </linearGradient>
+          </defs>
+          <path fill="url(#brand-blue-top)" d="M240 18C294 20 351 30 396 50C405 77 411 106 414 133L239 145Z"/>
+          <path fill="url(#brand-blue)" d="M40 130C111 133 161 101 201 105C217 118 231 134 239 145L239 345C228 335 217 329 205 332C172 267 111 219 41 189Z"/>
+          <path fill="url(#brand-lime)" d="M40 46C103 51 165 74 201 105C161 102 143 131 40 131Z"/>
+          <path fill="url(#brand-blue)" d="M286 331L379 355C350 396 295 429 236 454C259 418 277 376 286 331Z"/>
+          <path fill="url(#brand-lime)" d="M205 332C217 329 229 335 239 345C253 333 269 329 286 332C278 380 257 428 236 454C231 410 221 367 205 332Z"/>
+          <path fill="url(#brand-green)" d="M239 116C278 86 309 125 414 132L435 133L435 363C375 367 327 340 286 333C268 329 251 332 239 345Z"/>
+          <path fill="url(#brand-lime)" d="M40 214C125 251 205 321 207 444C107 421 50 302 40 214Z"/>
+        </svg>
+        <span>NSBM<span class="brand-sub">SPORTSHUB</span></span>
+      </a>
+      <nav class="nav-list">
+        <a href="student-dashboard.html">Student Portal</a>
+        <a href="book-facilities.html">Book Facilities</a>
+        <a href="clubs.html" class="active" aria-current="page">Clubs</a>
+        <a href="training-schedule.html">Training Schedule</a>
+        <a href="tournaments.html">Tournaments &amp; Results</a>
+        <a href="index.html" id="logout-btn">Sign out</a>
+      </nav>
+    </aside>
+
+    <!-- Workspace -->
+    <main id="main" class="workspace ab ab--clubs ab-js" data-api-base="/api">
+      <header class="topbar topbar--flex">
+        <div>
+          <span class="eyebrow">CLUBS &amp; SOCIETIES</span>
+          <h1 id="ab-title">Sports Clubs</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-success" id="api-sync-status" aria-live="polite">Syncing with SportsHub API...</span>
+          <button type="button" class="btn btn-primary" id="open-join-modal-btn" style="margin-top:0;">Join a Club</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Directory & Filters Card -->
+        <section class="card" aria-labelledby="ab-clubs-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow"><span id="directory-club-count">11</span> CLUBS TO JOIN</span>
+              <h2 id="ab-clubs-title">University Sports Directory</h2>
+              <p class="muted">Explore active squads, check training schedules, and submit trial or membership requests.</p>
+            </div>
+          </div>
+
+          <div class="sh-toolbar" role="region" aria-label="Filter sports clubs">
+            <div class="sh-search-wrap">
+              <label for="club-search-input" class="sr-only">Search sports clubs</label>
+              <input
+                type="search"
+                id="club-search-input"
+                class="sh-input"
+                placeholder="Search by sport, venue, or captain..."
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="sh-filters" role="group" aria-label="Category filter">
+              <button type="button" class="sh-chip is-active" data-category="all">All Sports</button>
+              <button type="button" class="sh-chip" data-category="field">Field &amp; Court</button>
+              <button type="button" class="sh-chip" data-category="indoor">Indoor &amp; Mind</button>
+              <button type="button" class="sh-chip" data-category="combat-aquatic">Combat &amp; Aquatics</button>
+            </div>
+          </div>
+
+          <!-- Club Cards Grid (Populated via clubs.js) -->
+          <ul class="ab-clubgrid" id="clubs-grid" data-count="11" aria-busy="true"></ul>
+
+          <!-- Empty State -->
+          <div class="sh-empty" id="clubs-empty" hidden>
+            <p class="muted">No sports clubs match your current filter.</p>
+            <button type="button" class="btn btn-ghost" id="reset-filters-btn">Reset filters</button>
+          </div>
+        </section>
+
+        <!-- Upcoming Fixtures Card -->
+        <section class="card" style="margin-top: 24px;" aria-labelledby="fixtures-heading">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">LIVE SCHEDULE</span>
+              <h2 id="fixtures-heading">Upcoming Trials &amp; Fixtures</h2>
+              <p class="muted">Inter-faculty trials, friendly matches, and upcoming tournament dates.</p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="refresh-fixtures-btn" style="margin-top:0;">Refresh Fixtures</button>
+          </div>
+
+          <div class="feed-list" id="upcoming-fixtures-list">
+            <div class="feed-item">
+              <strong>Loading upcoming fixtures...</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bottom Action Banner -->
+        <section class="card cta-banner" style="margin-top: 24px;" aria-labelledby="foot-cta-title">
+          <div>
+            <span class="eyebrow" style="color: var(--lime);">GET INVOLVED</span>
+            <h2 id="foot-cta-title" style="color: #fff;">Represent NSBM on the pitch, court, and mat</h2>
+            <p style="color: #a7b6c9; font-size: 12px; margin-bottom: 0;">
+              Submit your membership or trial request directly to your chosen sports club through NSBM SportsHub.
+            </p>
+          </div>
+          <div class="cta-actions">
+            <button type="button" class="btn btn-primary" id="cta-join-club-btn" style="margin-top:0;">Register for a Club</button>
+            <a class="btn btn-ghost-dark" href="book-facilities.html" style="margin-top:0;">View Sports Facilities</a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Club Details & Join Modal -->
+  <div class="sh-modal" id="club-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="sh-modal__backdrop" data-close-modal></div>
+    <div class="sh-modal__dialog">
+      <button type="button" class="sh-modal__close" id="close-modal-btn" aria-label="Close modal">✕</button>
+
+      <div id="modal-detail-view">
+        <span class="eyebrow" id="modal-club-category">SPORTS CLUB</span>
+        <h2 id="modal-title">Club Name</h2>
+        <p class="sh-modal__desc" id="modal-club-desc"></p>
+
+        <dl class="sh-meta-list">
+          <div><dt>Training Venue</dt><dd id="modal-club-venue">—</dd></div>
+          <div><dt>Schedule</dt><dd id="modal-club-schedule">—</dd></div>
+          <div><dt>Active Members</dt><dd id="modal-club-members">—</dd></div>
+          <div><dt>Club Lead</dt><dd id="modal-club-lead">—</dd></div>
+        </dl>
+
+        <div class="sh-modal__actions">
+          <button type="button" class="btn btn-primary" id="switch-to-join-btn">Apply to Join Club</button>
+          <a class="btn btn-ghost" id="modal-official-link" href="#" target="_blank" rel="noopener">Official NSBM Page ↗</a>
+        </div>
+      </div>
+
+      <form id="club-join-form" class="sh-form" novalidate hidden>
+        <span class="eyebrow">MEMBERSHIP &amp; TRIAL REQUEST</span>
+        <h2 id="join-modal-title">Join an NSBM Sports Club</h2>
+
+        <div class="sh-field">
+          <label for="join-club-select">Select Club</label>
+          <select id="join-club-select" name="club_slug" required></select>
+        </div>
+
+        <div class="sh-field">
+          <label for="join-student-name">Full Name</label>
+          <input type="text" id="join-student-name" name="student_name" required placeholder="e.g., Chanupa Bandarage">
+        </div>
+
+        <div class="sh-field-row">
+          <div class="sh-field">
+            <label for="join-student-id">Student ID</label>
+            <input type="text" id="join-student-id" name="student_id" required placeholder="e.g., 29412">
+          </div>
+          <div class="sh-field">
+            <label for="join-faculty">Faculty</label>
+            <select id="join-faculty" name="faculty" required>
+              <option value="Faculty of Computing">Faculty of Computing</option>
+              <option value="Faculty of Business">Faculty of Business</option>
+              <option value="Faculty of Engineering">Faculty of Engineering</option>
+              <option value="Faculty of Science">Faculty of Science</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sh-field">
+          <label for="join-email">NSBM / Personal Email</label>
+          <input type="email" id="join-email" name="email" required placeholder="student@students.nsbm.ac.lk">
+        </div>
+
+        <div class="sh-field">
+          <label for="join-experience">Experience / Notes (Optional)</label>
+          <textarea id="join-experience" name="notes" rows="3" placeholder="Prior experience, belt/rank, position, or preferred training slot..."></textarea>
+        </div>
+
+        <div class="sh-form-feedback" id="join-feedback" role="status" aria-live="polite"></div>
+
+        <div class="sh-modal__actions">
+          <button type="submit" class="btn btn-primary" id="submit-join-btn">Submit Application</button>
+          <button type="button" class="btn btn-ghost" id="back-to-detail-btn" hidden>Back to Club Info</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="services/guard.js"></script>
+  <script src="clubs.js" defer></script>
+</body>
+</html>
