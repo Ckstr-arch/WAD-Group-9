@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tournaments & Results · NSBM SportsHub</title>
-  <link rel="stylesheet" href="student-dashboard.css">
+  <title>Tournaments · NSBM SportsHub</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="tournament.css">
 </head>
 <body data-require="any">
   <div class="app-shell">
@@ -15,8 +16,16 @@
       </div>
       <nav class="nav-list">
         <a href="student-dashboard.html">Student Portal</a>
+<<<<<<< Updated upstream
         <a href="clubs.html">Clubs & Memberships</a>
         <a href="tournaments.html" class="active">Tournaments & Results</a>
+=======
+        <a href="book-facilities.html">Book Facilities</a>
+        <a href="clubs.html">Clubs</a>
+        <a href="training-schedule.html">Training Schedule</a>
+        <a href="tournament.html" class="active" aria-current="page">Tournaments</a>
+        <a href="result.html">Results</a>
+>>>>>>> Stashed changes
         <a href="index.html" id="logout-btn">Sign out</a>
       </nav>
     </aside>
@@ -24,29 +33,49 @@
     <main class="workspace">
       <header class="topbar">
         <div>
-          <span class="eyebrow">COMPETITION & SCORES</span>
-          <h1>Tournaments & Live Results</h1>
+          <span class="eyebrow">COMPETITION</span>
+          <h1>Tournaments</h1>
+          <p class="muted">Browse upcoming tournaments and register your team.</p>
         </div>
       </header>
 
       <div class="content">
-        <div class="card">
-          <h2>Active Tournaments & Match Results</h2>
-          <p class="muted">Check real-time brackets, schedules, and past match results.</p>
-          <div class="feed-list" style="margin-top: 15px;">
-            <div class="feed-item">
-              <strong>Inter-Faculty Championship Finals</strong>
-              <p class="muted">Status: Scheduled for Saturday · Venue: Indoor Stadium</p>
-            </div>
-            <div class="feed-item">
-              <strong>Taekwon-Do Sparring Tournament Results</strong>
-              <p class="muted">Faculty of Computing secured 1st place in team patterns.</p>
-            </div>
-          </div>
+        <div class="toolbar">
+          <input id="search" type="search" placeholder="Search tournaments..." aria-label="Search tournaments">
+          <select id="status-filter" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="registration_open">Registration open</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select id="sport-filter" aria-label="Filter by sport">
+            <option value="">All sports</option>
+          </select>
         </div>
+
+        <div id="state" class="state-box" hidden></div>
+        <div id="t-grid" class="t-grid"></div>
       </div>
     </main>
   </div>
-  <script type="module" src="services/guard.js"></script>
+
+  <dialog id="register-dialog">
+    <form id="register-form">
+      <h2 id="register-title">Register</h2>
+      <p class="muted">Enter your team name, or leave it blank to use your own name.</p>
+      <input id="team-name" maxlength="120" placeholder="Team name" autocomplete="off">
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-outline" id="register-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="mock-api.js"></script>
+  <script src="tournament.js"></script>
 </body>
 </html>
