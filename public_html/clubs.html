@@ -1,43 +1,237 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Explore sports clubs at NSBM Green University and find a club to match your interests.">
-  <title>Sports Clubs - NSBM SportsHub</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sports Clubs · NSBM SportsHub</title>
+  <meta name="description" content="Explore NSBM Sports Clubs, check schedules and upcoming fixtures, and register for clubs through NSBM SportsHub.">
+  <link rel="stylesheet" href="student-dashboard.css">
   <link rel="stylesheet" href="clubs.css">
 </head>
-<body data-require="any">
+<body data-require="student">
   <div class="app-shell">
-    
-      <div class="brand">
-        <span class="brand-mark">ϟ</span>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="student-dashboard.html" class="brand" aria-label="NSBM SportsHub" style="text-decoration:none;">
+        <svg class="brand-mark" viewBox="34 14 407 444" width="32" height="32" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="brand-blue" x1="40" y1="130" x2="360" y2="360" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#2463a1"/>
+              <stop offset="1" stop-color="#18558e"/>
+            </linearGradient>
+            <linearGradient id="brand-blue-top" x1="240" y1="20" x2="414" y2="133" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#205e9b"/>
+              <stop offset="1" stop-color="#245e96"/>
+            </linearGradient>
+            <linearGradient id="brand-green" x1="239" y1="180" x2="435" y2="280" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#39b143"/>
+              <stop offset="1" stop-color="#32a942"/>
+            </linearGradient>
+            <linearGradient id="brand-lime" x1="40" y1="200" x2="286" y2="380" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#8fc640"/>
+              <stop offset="1" stop-color="#88c440"/>
+            </linearGradient>
+          </defs>
+          <path fill="url(#brand-blue-top)" d="M240 18C294 20 351 30 396 50C405 77 411 106 414 133L239 145Z"/>
+          <path fill="url(#brand-blue)" d="M40 130C111 133 161 101 201 105C217 118 231 134 239 145L239 345C228 335 217 329 205 332C172 267 111 219 41 189Z"/>
+          <path fill="url(#brand-lime)" d="M40 46C103 51 165 74 201 105C161 102 143 131 40 131Z"/>
+          <path fill="url(#brand-blue)" d="M286 331L379 355C350 396 295 429 236 454C259 418 277 376 286 331Z"/>
+          <path fill="url(#brand-lime)" d="M205 332C217 329 229 335 239 345C253 333 269 329 286 332C278 380 257 428 236 454C231 410 221 367 205 332Z"/>
+          <path fill="url(#brand-green)" d="M239 116C278 86 309 125 414 132L435 133L435 363C375 367 327 340 286 333C268 329 251 332 239 345Z"/>
+          <path fill="url(#brand-lime)" d="M40 214C125 251 205 321 207 444C107 421 50 302 40 214Z"/>
+        </svg>
         <span>NSBM<span class="brand-sub">SPORTSHUB</span></span>
-      </div>
+      </a>
+      <nav class="nav-list">
+        <a href="student-dashboard.html">Student Portal</a>
+        <a href="book-facilities.html">Book Facilities</a>
+        <a href="clubs.html" class="active" aria-current="page">Clubs</a>
+        <a href="training-schedule.html">Training Schedule</a>
+        <a href="tournaments.html">Tournaments &amp; Results</a>
+        <a href="index.html" id="logout-btn">Sign out</a>
+      </nav>
+    </aside>
 
-    <main class="workspace">
-      <header class="topbar">
+    <!-- Workspace -->
+    <main id="main" class="workspace ab ab--clubs ab-js" data-api-base="/api">
+      <header class="topbar topbar--flex">
         <div>
-          <span class="eyebrow">COMMUNITY</span>
-          <h1>University Clubs & Memberships</h1>
+          <span class="eyebrow">CLUBS &amp; SOCIETIES</span>
+          <h1 id="ab-title">Sports Clubs</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-success" id="api-sync-status" aria-live="polite">Syncing with SportsHub API...</span>
+          <button type="button" class="btn btn-primary" id="open-join-modal-btn" style="margin-top:0;">Join a Club</button>
         </div>
       </header>
 
       <div class="content">
-        <div class="cards-grid" id="clubs-grid">
-          <div class="card">
-            <h3>ITF Taekwon-Do Club</h3>
-            <p class="muted">Master self-defense, forms, and sparring conditioning.</p>
-            <span class="badge badge-success">Joined</span>
+        <!-- Directory & Filters Card -->
+        <section class="card" aria-labelledby="ab-clubs-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow"><span id="directory-club-count">11</span> CLUBS TO JOIN</span>
+              <h2 id="ab-clubs-title">University Sports Directory</h2>
+              <p class="muted">Explore active squads, check training schedules, and submit trial or membership requests.</p>
+            </div>
           </div>
-          <div class="card">
-            <h3>NSBM Cricket Club</h3>
-            <p class="muted">Inter-faculty matches and professional coaching.</p>
-            <button class="btn btn-primary" onclick="alert('Membership requested!')">Join Club</button>
+
+          <div class="sh-toolbar" role="region" aria-label="Filter sports clubs">
+            <div class="sh-search-wrap">
+              <label for="club-search-input" class="sr-only">Search sports clubs</label>
+              <input
+                type="search"
+                id="club-search-input"
+                class="sh-input"
+                placeholder="Search by sport, venue, or captain..."
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="sh-filters" role="group" aria-label="Category filter">
+              <button type="button" class="sh-chip is-active" data-category="all">All Sports</button>
+              <button type="button" class="sh-chip" data-category="field">Field &amp; Court</button>
+              <button type="button" class="sh-chip" data-category="indoor">Indoor &amp; Mind</button>
+              <button type="button" class="sh-chip" data-category="combat-aquatic">Combat &amp; Aquatics</button>
+            </div>
           </div>
-        </div>
+
+          <!-- Club Cards Grid (Populated via clubs.js) -->
+          <ul class="ab-clubgrid" id="clubs-grid" data-count="11" aria-busy="true"></ul>
+
+          <!-- Empty State -->
+          <div class="sh-empty" id="clubs-empty" hidden>
+            <p class="muted">No sports clubs match your current filter.</p>
+            <button type="button" class="btn btn-ghost" id="reset-filters-btn">Reset filters</button>
+          </div>
+        </section>
+
+        <!-- Upcoming Fixtures Card -->
+        <section class="card" style="margin-top: 24px;" aria-labelledby="fixtures-heading">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">LIVE SCHEDULE</span>
+              <h2 id="fixtures-heading">Upcoming Trials &amp; Fixtures</h2>
+              <p class="muted">Inter-faculty trials, friendly matches, and upcoming tournament dates.</p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="refresh-fixtures-btn" style="margin-top:0;">Refresh Fixtures</button>
+          </div>
+
+          <div class="feed-list" id="upcoming-fixtures-list">
+            <div class="feed-item">
+              <strong>Loading upcoming fixtures...</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bottom Action Banner -->
+        <section class="card cta-banner" style="margin-top: 24px;" aria-labelledby="foot-cta-title">
+          <div>
+            <span class="eyebrow" style="color: var(--lime);">GET INVOLVED</span>
+            <h2 id="foot-cta-title" style="color: #fff;">Represent NSBM on the pitch, court, and mat</h2>
+            <p style="color: #a7b6c9; font-size: 12px; margin-bottom: 0;">
+              Submit your membership or trial request directly to your chosen sports club through NSBM SportsHub.
+            </p>
+          </div>
+          <div class="cta-actions">
+            <button type="button" class="btn btn-primary" id="cta-join-club-btn" style="margin-top:0;">Register for a Club</button>
+            <a class="btn btn-ghost-dark" href="book-facilities.html" style="margin-top:0;">View Sports Facilities</a>
+          </div>
+        </section>
       </div>
     </main>
   </div>
+
+  <!-- Club Details & Join Modal -->
+  <div class="sh-modal" id="club-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="sh-modal__backdrop" data-close-modal></div>
+    <div class="sh-modal__dialog">
+      <button type="button" class="sh-modal__close" id="close-modal-btn" aria-label="Close modal">✕</button>
+
+      <div id="modal-detail-view">
+        <span class="eyebrow" id="modal-club-category">SPORTS CLUB</span>
+        <h2 id="modal-title">Club Name</h2>
+        <p class="sh-modal__desc" id="modal-club-desc"></p>
+
+        <dl class="sh-meta-list">
+          <div><dt>Training Venue</dt><dd id="modal-club-venue">—</dd></div>
+          <div><dt>Schedule</dt><dd id="modal-club-schedule">—</dd></div>
+          <div><dt>Active Members</dt><dd id="modal-club-members">—</dd></div>
+          <div><dt>Club Lead</dt><dd id="modal-club-lead">—</dd></div>
+        </dl>
+
+        <div class="sh-modal__actions">
+          <button type="button" class="btn btn-primary" id="switch-to-join-btn">Apply to Join Club</button>
+          <a class="btn btn-ghost" id="modal-official-link" href="#" target="_blank" rel="noopener">Official NSBM Page ↗</a>
+        </div>
+      </div>
+
+      <form id="club-join-form" class="sh-form" novalidate hidden>
+        <span class="eyebrow">MEMBERSHIP &amp; TRIAL REQUEST</span>
+        <h2 id="join-modal-title">Join an NSBM Sports Club</h2>
+
+        <div class="sh-field">
+          <label for="join-club-select">Select Club</label>
+          <select id="join-club-select" name="club_slug" required></select>
+        </div>
+
+        <div class="sh-field">
+          <label for="join-student-name">Full Name</label>
+          <input type="text" id="join-student-name" name="student_name" required placeholder="e.g., Saman Kumara">
+        </div>
+
+        <div class="sh-field-row">
+          <div class="sh-field">
+            <label for="join-student-id">Student ID</label>
+            <input type="text" id="join-student-id" name="student_id" required placeholder="e.g., 29412">
+          </div>
+          <div class="sh-field">
+            <label for="join-faculty">Faculty</label>
+            <select id="join-faculty" name="faculty" required>
+              <option value="Faculty of Computing">Faculty of Computing</option>
+              <option value="Faculty of Business">Faculty of Business</option>
+              <option value="Faculty of Engineering">Faculty of Engineering</option>
+              <option value="Faculty of Science">Faculty of Science</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sh-field">
+          <label for="join-email">NSBM / Personal Email</label>
+          <input type="email" id="join-email" name="email" required placeholder="student@students.nsbm.ac.lk">
+        </div>
+
+        <div class="sh-field">
+          <label for="join-experience">Experience / Notes (Optional)</label>
+          <textarea id="join-experience" name="notes" rows="3" placeholder="Prior experience, belt/rank, position, or preferred training slot..."></textarea>
+        </div>
+
+        <div class="sh-form-feedback" id="join-feedback" role="status" aria-live="polite"></div>
+
+        <div class="sh-modal__actions">
+          <button type="submit" class="btn btn-primary" id="submit-join-btn">Submit Application</button>
+          <button type="button" class="btn btn-ghost" id="back-to-detail-btn" hidden>Back to Club Info</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add, edit, or remove club images directly by data-slug -->
+  <template id="club-images">
+    <img data-slug="nsbm-athletics-club" src="./assets/pictures/Athletic.jpg" alt="Athletics Club">
+    <img data-slug="nsbm-badminton-club" src="./assets/pictures/Badminton.jpg" alt="Badminton Club">
+    <img data-slug="chess-club" src="./assets/pictures/Chess.jpg" alt="Chess Club">
+    <img data-slug="cricket-club" src="./assets/pictures/Cricket.jpg" alt="Cricket Club">
+    <img data-slug="nsbm-martial-arts-club" src="./assets/pictures/Taekwondo.jpg" alt="Martial Arts Club">
+    <img data-slug="nsbm-netball-club" src="./assets/pictures/Netball.jpg" alt="Netball Club">
+    <img data-slug="nsbm-rugby-club" src="./assets/pictures/Rugby.jpg" alt="Rugby Club">
+    <img data-slug="swimming-club" src="./assets/pictures/Swimming Pool.jpg" alt="Swimming Club">
+    <img data-slug="table-tennis-club" src="./assets/pictures/Table Tennis.jpg" alt="Table Tennis Club">
+    <img data-slug="tennis-club" src="./assets/pictures/Indoor Court.jpg" alt="Tennis Club">
+    <img data-slug="nsbm-volleyball-club" src="./assets/pictures/Indoor Court.jpg" alt="Volleyball Club">
+  </template>
+
+  <script type="module" src="services/guard.js"></script>
+  <script src="clubs.js" defer></script>
 </body>
 </html>

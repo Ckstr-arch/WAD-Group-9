@@ -2,6 +2,7 @@
 /**
  * api/clubs.php
  *   GET                         list clubs (+ member_count, and my_status for the caller)
+ *   GET  ?view=joined           clubs where the caller has a pending/approved/rejected membership
  *   GET  ?view=my               the caller's own memberships/requests
  *   GET  ?view=requests         admin: join requests (default pending; ?status=approved|rejected|all)
  *   POST { name, sport, president, description }  admin: create a club
@@ -56,6 +57,19 @@ if ($method === 'GET') {
 
     if ($view === 'my') {
         $stmt = db()->prepare(REQUEST_SELECT . ' WHERE m.student_id = ? ORDER BY m.requested_at DESC');
+        $stmt->execute([$user['id']]);
+        json_response(['success' => true, 'data' => $stmt->fetchAll()]);
+    }
+
+    if ($view === 'joined') {
+        $stmt = db()->prepare(
+            "SELECT c.id, c.name, c.sport, c.president, c.description, c.status, c.created_at,
+                    m.status AS my_status, m.requested_at
+             FROM club_memberships m
+             JOIN clubs c ON c.id = m.club_id
+             WHERE m.student_id = ?
+             ORDER BY m.requested_at DESC, c.name ASC"
+        );
         $stmt->execute([$user['id']]);
         json_response(['success' => true, 'data' => $stmt->fetchAll()]);
     }
