@@ -135,7 +135,8 @@
 .ab-clubgrid img {
   width: 100%;
   height: 135px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #fff;
   border-radius: 6px;
   margin-bottom: 6px;
 }
@@ -298,4 +299,20 @@
   .sh-meta-list {
     grid-template-columns: 1fr;
   }
+}
+
+/*zooming the Table Tennis image*/
+.ab-clubgrid img[src*="Table Tennis"] {
+  object-fit: cover !important;
+  object-position: center 46%;
+}
+
+/* Official NSBM Page button - light green */
+#modal-official-link {
+  background: #e6f8c4;
+  color: #000 !important;
+  border: 1px solid #b8f34a;
+}
+#modal-official-link:hover {
+  background: #d6f2a0;
 }
